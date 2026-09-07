@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Me.Compass — dashboard (chosen design: A list ↔ D panels)</title>
+<style>
+  :root {
+    --sidebar: 220px; --bg: #f5f6f8; --panel: #fff; --border: #e5e7eb; --text: #111827; --dim: #6b7280;
+    --high: #dc2626; --medium: #d97706; --low: #64748b;
+    --accent: #2563eb; --accent-bg: #eff6ff; --ok: #16a34a;
+    --gmail: #dc2626; --chat: #7c3aed; --drive_meeting: #2563eb; --manual: #64748b;
+    --gmail-bg: #fef2f2; --chat-bg: #f5f3ff; --drive_meeting-bg: #eff6ff; --manual-bg: #f1f5f9;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", sans-serif; font-size: 13px; color: var(--text); background: var(--bg); display: grid; grid-template-columns: var(--sidebar) 1fr; height: 100vh; overflow: hidden; }
+
+  aside { background: #0f172a; color: #cbd5e1; display: flex; flex-direction: column; padding: 14px 10px; }
+  aside .brand { font-weight: 700; color: #fff; font-size: 14px; padding: 4px 8px 14px; }
+  aside .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+  aside .nav-item.active { background: #1e293b; color: #fff; }
+  aside .nav-item .count { margin-left: auto; font-size: 10px; background: var(--high); color: #fff; padding: 1px 6px; border-radius: 8px; }
+  aside .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; padding: 14px 8px 6px; }
+  aside .nav-item.future { opacity: .45; cursor: default; }
+  aside .nav-item.future .tag { margin-left: auto; font-size: 9px; border: 1px dashed #475569; padding: 0 4px; border-radius: 3px; }
+  aside .spacer { flex: 1; }
+  aside .nav-item.muted { color: #64748b; }
+
+  .shell { display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+  .topbar { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--panel); flex-shrink: 0; }
+  .topbar h1 { font-size: 15px; margin: 0; }
+  .topbar .grow { flex: 1; }
+  .quickadd { width: 320px; height: 30px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font-size: 12px; background: var(--bg); }
+  .main { flex: 1; overflow: auto; padding: 22px 24px 90px; }
+  .muted { color: var(--dim); }
+  .kbd { font-size: 10px; color: var(--dim); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; background: #fff; }
+
+  .pri-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pri-dot.high { background: var(--high); } .pri-dot.medium { background: var(--medium); } .pri-dot.low { background: var(--low); }
+  .due { font-size: 11px; padding: 2px 7px; border-radius: 5px; background: #f3f4f6; color: #374151; white-space: nowrap; font-weight: 500; }
+  .due.soon { background: #fef3c7; color: #92400e; } .due.over { background: #fee2e2; color: #991b1b; } .due.today { background: #dbeafe; color: #1e40af; }
+  .due.guess { outline: 1px dashed currentColor; outline-offset: -1px; background: transparent; }
+  .due.guess::before { content: "≈ "; }
+  .run { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 8px; border: none; cursor: pointer; background: var(--accent); color: #fff; white-space: nowrap; }
+  .run:hover { background: #1d4ed8; } .run.running { background: #93c5fd; cursor: progress; } .run.ran { background: var(--ok); }
+  .run.sm { padding: 3px 9px; font-size: 11px; }
+  .ghost { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--dim); }
+  .ghost:hover { background: #f3f4f6; }
+  .hover-actions { display: none; gap: 6px; }
+  .row:hover .hover-actions { display: flex; }
+
+  /* anchor 1: numbered plan (v4-A) */
+  .plan { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); margin-bottom: 26px; overflow: hidden; }
+  .plan .ph { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .plan .ph h2 { font-size: 15px; margin: 0; }
+  .plan .prow { display: flex; align-items: center; gap: 14px; height: 58px; padding: 0 18px; border-bottom: 1px solid var(--border); }
+  .plan .prow:last-child { border-bottom: none; }
+  .plan .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .plan .body { flex: 1; min-width: 0; }
+  .plan .body .next { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plan .body .sub { font-size: 12px; color: var(--dim); display: flex; gap: 8px; align-items: center; margin-top: 2px; }
+
+  /* anchor 3: inline-next-step row (v4-C) */
+  .row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; }
+  .row .title { font-weight: 600; white-space: nowrap; }
+  .row .next { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #374151; }
+  .row .next::before { content: "→ "; color: var(--accent); }
+  .row.done, .row.dismissed { opacity: .45; }
+  .row.two { flex-wrap: wrap; gap: 6px 10px; }
+  .row.two .next { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  /* anchor 2: source group header (v1-C) */
+  .sh { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 12.5px; padding: 8px 12px; border-radius: 8px; margin: 0 0 10px; }
+  .sh .n { font-weight: 500; opacity: .8; }
+  .sh .over-badge { margin-left: auto; font-size: 10px; background: #fee2e2; color: #991b1b; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+  .sh.gmail { background: var(--gmail-bg); color: #991b1b; border-left: 4px solid var(--gmail); }
+  .sh.chat { background: var(--chat-bg); color: #5b21b6; border-left: 4px solid var(--chat); }
+  .sh.drive_meeting { background: var(--drive_meeting-bg); color: #1e40af; border-left: 4px solid var(--drive_meeting); }
+  .sh.manual { background: var(--manual-bg); color: #334155; border-left: 4px solid var(--manual); }
+  .group { margin-bottom: 22px; }
+
+  /* B: 4 columns */
+  .cols4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }
+  .cols4 .row .title { white-space: normal; }
+
+  /* C: segmented tabs */
+  .seg { display: inline-flex; background: #e5e7eb; border-radius: 10px; padding: 3px; gap: 2px; margin-bottom: 14px; }
+  .seg button { border: none; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12.5px; color: var(--dim); display: flex; gap: 6px; align-items: center; }
+  .seg button.on { background: #fff; color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+  .seg .n { font-size: 10px; background: #f3f4f6; padding: 0 5px; border-radius: 6px; }
+  .seg button.on .n { background: var(--accent-bg); color: var(--accent); }
+  .srcpill { font-size: 10px; padding: 1px 6px; border-radius: 6px; font-weight: 600; }
+  .srcpill.gmail { background: var(--gmail-bg); color: #991b1b; } .srcpill.chat { background: var(--chat-bg); color: #5b21b6; }
+  .srcpill.drive_meeting { background: var(--drive_meeting-bg); color: #1e40af; } .srcpill.manual { background: var(--manual-bg); color: #334155; }
+
+  /* D: 2x2 panels */
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .panel .sh { border-radius: 0; margin: 0; padding: 12px 16px; border-left: none; border-bottom: 1px solid var(--border); }
+  .panel .row { border: none; border-radius: 0; margin: 0; border-bottom: 1px solid var(--border); }
+  .panel .row:last-child { border-bottom: none; }
+  .panel .empty { padding: 18px 16px; color: var(--dim); }
+
+  /* E: source sections with importance sub-bands */
+  .subh { display: flex; align-items: center; gap: 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); font-weight: 600; margin: 8px 0 6px 6px; }
+
+  #switcher-unused { position: fixed; bottom: 16px; left: calc(var(--sidebar) + (100vw - var(--sidebar)) / 2); transform: translateX(-50%); background: #0f172a; color: #fff; border-radius: 999px; padding: 6px; display: flex; align-items: center; gap: 2px; box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 12px; z-index: 100; }
+  #switcher button { background: rgba(255,255,255,.12); border: none; color: #fff; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
+  #switcher button:hover { background: rgba(255,255,255,.28); }
+  #switcher .label { padding: 0 10px; white-space: nowrap; }
+  #toast { position: fixed; right: 20px; bottom: 20px; background: #0f172a; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; display: none; z-index: 200; }
+</style>
+</head>
+<body>
+<!--
+  README preview render — same chosen design as
+  .scratch/personal-action-manager/assets/dashboard-final.html, with the
+  sample ACTIONS array replaced by fictional data (the original's sample
+  data was drawn from real Google Drive content and is git-ignored; this
+  copy exists solely to produce a safe screenshot for the README).
+-->
+<aside>
+  <div class="brand">Me.Compass</div>
+  <div class="nav-item active">◎ <span>Actions</span><span class="count" id="open-count"></span></div>
+  <div class="section-label">Future modules</div>
+  <div class="nav-item future">▦ <span>Notes</span><span class="tag">soon</span></div>
+  <div class="nav-item future">▤ <span>Habits</span><span class="tag">soon</span></div>
+  <div class="nav-item future">▥ <span>Finance</span><span class="tag">soon</span></div>
+  <div class="nav-item muted">＋ Add module</div>
+  <div class="spacer"></div>
+  <div class="nav-item muted">⚙ Settings</div>
+</aside>
+<div class="shell">
+  <div class="topbar">
+    <h1>Actions</h1><span class="muted">Sunday 6 Sep</span>
+    <div class="grow"></div>
+    <input class="quickadd" placeholder="Quick add…  (q)">
+    <span class="seg" id="viewtoggle" style="margin:0"></span>
+    <span class="kbd">1–6</span><span class="muted">run step</span> <span class="kbd">v</span><span class="muted">view</span>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SRC = { gmail: { icon: '✉️', label: 'Email' }, chat: { icon: '💬', label: 'Chat' }, drive_meeting: { icon: '📝', label: 'Meetings' }, manual: { icon: '✍️', label: 'Manual' } };
+const SRC_ORDER = ['gmail', 'chat', 'drive_meeting', 'manual'];
+const RANK = { high: 0, medium: 1, low: 2 };
+const PL = { high: 'High', medium: 'Medium', low: 'Low' };
+const NOW = new Date('2026-09-06T09:00:00');
+const d = n => { const x = new Date(NOW); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+const TODAY = d(0);
+
+let ACTIONS = [
+  { id: 1, title: 'Send Q3 numbers to Finance', source_type: 'gmail', status: 'open', due_date: d(-2), due_date_inferred: false, priority: 'high', suggested_next_step: 'Export the Q3 actuals and reply with a one-line variance summary.' },
+  { id: 2, title: 'Escalate hosting budget overage', source_type: 'chat', status: 'open', due_date: d(-1), due_date_inferred: false, priority: 'high', suggested_next_step: 'Forward the billing alert with the two services driving it; ask for a threshold call.' },
+  { id: 3, title: 'Follow up on vendor API access', source_type: 'drive_meeting', status: 'open', due_date: d(-5), due_date_inferred: true, priority: 'high', suggested_next_step: 'Ping the vendor account owner directly — 5 days stuck, blocks the integration.' },
+  { id: 4, title: 'Confirm interview slot with candidate', source_type: 'chat', status: 'open', due_date: d(0), due_date_inferred: false, priority: 'high', suggested_next_step: 'Confirm 2pm Thursday and send the invite with the panel doc attached.' },
+  { id: 5, title: 'Send peer feedback summary', source_type: 'drive_meeting', status: 'open', due_date: d(1), due_date_inferred: true, priority: 'high', suggested_next_step: 'Strip identifying comments from the export and book 15 min with each report.' },
+  { id: 6, title: 'Review contractor rate proposal', source_type: 'gmail', status: 'open', due_date: d(3), due_date_inferred: false, priority: 'medium', suggested_next_step: 'Compare the new rates against the current contract and note the delta for renewal.' },
+  { id: 7, title: 'Draft messaging retry options', source_type: 'drive_meeting', status: 'open', due_date: d(2), due_date_inferred: true, priority: 'medium', suggested_next_step: 'Draft a one-pager comparing the two retry strategies discussed.' },
+  { id: 8, title: 'Update review doc with metrics', source_type: 'drive_meeting', status: 'open', due_date: d(5), due_date_inferred: true, priority: 'medium', suggested_next_step: 'Pull the last two quarters of metrics and add one line per team.' },
+  { id: 9, title: 'Reply to staffing agency', source_type: 'gmail', status: 'open', due_date: d(4), due_date_inferred: false, priority: 'medium', suggested_next_step: 'Reply with engagement shape: 3 months, senior, 2 days/week.' },
+  { id: 10, title: 'Schedule cross-training session', source_type: 'chat', status: 'open', due_date: d(8), due_date_inferred: true, priority: 'medium', suggested_next_step: 'Book 30 min and bring the role description.' },
+  { id: 11, title: 'Call the dentist back', source_type: 'manual', status: 'open', due_date: d(4), due_date_inferred: true, priority: 'low', suggested_next_step: 'Call after work Tuesday about rescheduling.' },
+  { id: 12, title: 'Renew car registration', source_type: 'manual', status: 'open', due_date: d(20), due_date_inferred: false, priority: 'low', suggested_next_step: 'Renew online; card already on file.' },
+  { id: 13, title: 'Read the shared design doc', source_type: 'chat', status: 'open', due_date: null, due_date_inferred: false, priority: 'low', suggested_next_step: 'Skim the doc and leave two comments on scope.' },
+  { id: 14, title: 'Share standup notes', source_type: 'chat', status: 'done', due_date: d(-3), due_date_inferred: false, priority: 'medium', suggested_next_step: 'Post yesterday’s notes in the team channel.' },
+];
+
+const isOpen = a => a.status === 'open';
+const isOver = a => isOpen(a) && a.due_date && a.due_date < TODAY;
+const isToday = a => isOpen(a) && a.due_date === TODAY;
+const daysTo = a => Math.round((new Date(a.due_date) - NOW) / 86400000);
+const byPriDue = (a, b) => RANK[a.priority] - RANK[b.priority] || (a.due_date || '9999').localeCompare(b.due_date || '9999');
+function due(a) {
+  if (!a.due_date) return `<span class="due">no date</span>`;
+  const n = daysTo(a);
+  const cls = isOver(a) ? 'over' : isToday(a) ? 'today' : n <= 2 ? 'soon' : '';
+  const txt = isOver(a) ? `${-n}d overdue` : isToday(a) ? 'Today' : n === 1 ? 'Tomorrow' : n <= 6 ? new Date(a.due_date).toLocaleDateString('en-AU', { weekday: 'short' }) : new Date(a.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  return `<span class="due ${cls} ${a.due_date_inferred ? 'guess' : ''}" title="${a.due_date_inferred ? 'AI-guessed — click to set' : 'from source'}">${txt}</span>`;
+}
+const src = a => `<span title="${SRC[a.source_type].label}">${SRC[a.source_type].icon}</span>`;
+const dot = a => `<span class="pri-dot ${a.priority}" title="${PL[a.priority]}"></span>`;
+function runBtn(a, sm = false) {
+  const s = a.run_state || 'idle';
+  const t = s === 'running' ? 'Running…' : s === 'ran' ? '✓ Review' : '▶ Run';
+  return `<button class="run ${s} ${sm ? 'sm' : ''}" onclick="event.stopPropagation(); runStep(${a.id})">${t}</button>`;
+}
+const hov = a => `<span class="hover-actions"><button class="ghost" onclick="setStatus(${a.id},'done')">Done</button><button class="ghost">Snooze</button><button class="ghost" onclick="setStatus(${a.id},'dismissed')">Not an action</button></span>`;
+function setStatus(id, status) { const a = ACTIONS.find(x => x.id === id); if (a) a.status = status; render(); }
+function runStep(id) {
+  const a = ACTIONS.find(x => x.id === id); if (!a || a.run_state === 'running') return;
+  a.run_state = 'running'; render(); toast(`Claude is working on: ${a.title}`);
+  setTimeout(() => { a.run_state = 'ran'; render(); toast(`Step done — review the draft for "${a.title}"`); }, 1600);
+}
+let toastTimer; function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = 'none', 2200); }
+
+function todaySteps(n = 5) {
+  return ACTIONS.filter(a => isOpen(a) && (isOver(a) || isToday(a) || a.priority === 'high')).sort(byPriDue).slice(0, n);
+}
+// anchor 1
+function plan() {
+  const steps = todaySteps();
+  return `<div class="plan">
+    <div class="ph"><h2>Today's next steps</h2><span class="muted">${steps.length} steps · <span class="kbd">1</span>–<span class="kbd">${steps.length}</span> to run</span></div>
+    ${steps.map((a, i) => `<div class="prow">
+      <span class="num">${i + 1}</span>
+      <div class="body"><div class="next">${a.suggested_next_step}</div><div class="sub">${src(a)} ${a.title} · ${dot(a)} ${PL[a.priority]}</div></div>
+      ${due(a)} ${runBtn(a)}
+    </div>`).join('')}
+  </div>`;
+}
+// anchor 3
+const row = (a, two = false, showSrc = false) => `<div class="row ${a.status} ${two ? 'two' : ''}">
+  ${dot(a)} ${showSrc ? src(a) : ''} <span class="title">${a.title}</span>
+  <span class="next">${a.suggested_next_step}</span>
+  ${due(a)} ${hov(a)} ${runBtn(a, true)}
+</div>`;
+// anchor 2
+const srcHeader = (s, items) => `<div class="sh ${s}">${SRC[s].icon} ${SRC[s].label} <span class="n">${items.length}</span>${items.some(isOver) ? `<span class="over-badge">${items.filter(isOver).length} overdue</span>` : ''}</div>`;
+const openBySrc = s => ACTIONS.filter(a => isOpen(a) && a.source_type === s).sort(byPriDue);
+
+// ---------- A: stacked source sections ----------
+function renderA() {
+  return plan() + SRC_ORDER.map(s => { const items = openBySrc(s); return items.length ? `<div class="group">${srcHeader(s, items)}${items.map(a => row(a)).join('')}</div>` : ''; }).join('');
+}
+// ---------- D: 2x2 panels ----------
+function renderD() {
+  return plan() + `<div class="panels">${SRC_ORDER.map(s => { const items = openBySrc(s); return `<div class="panel">${srcHeader(s, items)}${items.length ? items.map(a => row(a, true)).join('') : '<div class="empty">Nothing from ' + SRC[s].label.toLowerCase() + '.</div>'}</div>`; }).join('')}</div>`;
+}
+
+const VIEWS = { list: { name: 'List', render: renderA }, panels: { name: 'Panels', render: renderD } };
+const cur = () => { const p = new URLSearchParams(location.search).get('view'); return VIEWS[p] ? p : 'list'; };
+function setView(k) { const u = new URL(location.href); u.searchParams.set('view', k); history.replaceState(null, '', u); render(); }
+function toggleView() { setView(cur() === 'list' ? 'panels' : 'list'); }
+function render() {
+  const k = cur();
+  document.getElementById('main').innerHTML = VIEWS[k].render();
+  document.getElementById('open-count').textContent = ACTIONS.filter(isOpen).length;
+  document.getElementById('viewtoggle').innerHTML = Object.keys(VIEWS).map(v => `<button class="${v === k ? 'on' : ''}" onclick="setView('${v}')">${v === 'list' ? '☰' : '▦'} ${VIEWS[v].name}</button>`).join('');
+}
+document.addEventListener('keydown', e => {
+  const t = document.activeElement.tagName;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(t) || document.activeElement.isContentEditable) return;
+  if (e.key === 'v') toggleView();
+  if (/^[1-6]$/.test(e.key)) { const s = todaySteps(6)[+e.key - 1]; if (s) runStep(s.id); }
+});
+render();
+</script>
+</body>
+</html>
