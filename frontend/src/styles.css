@@ -1,0 +1,15 @@
+body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 1rem; }
+.action-card { border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; margin: 0.5rem 0; }
+.action-card--overdue { border-color: #c0392b; background: #fdecea; }
+.badge { font-size: 0.75em; background: #eee; border-radius: 4px; padding: 0.1em 0.4em; margin-left: 0.4em; }
+.badge--overdue { background: #c0392b; color: white; }
+.action-card__meta { display: flex; gap: 1rem; align-items: center; font-size: 0.9em; margin: 0.5rem 0; }
+.action-card__actions { display: flex; gap: 0.5rem; }
+.run-result { background: #f4f4f4; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; }
+.run-result--failed { background: #fdecea; }
+.dashboard__body--panel { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.sources-bar { display: flex; gap: 1rem; margin: 1rem 0; }
+.source-status { border: 1px solid #ddd; border-radius: 6px; padding: 0.4rem 0.6rem; display: flex; gap: 0.5rem; align-items: center; }
+.source-status--error { border-color: #c0392b; }
+.source-status__error { color: #c0392b; font-size: 0.8em; }
+.add-action-form { display: flex; flex-direction: column; gap: 0.4rem; max-width: 400px; margin: 1rem 0; }
