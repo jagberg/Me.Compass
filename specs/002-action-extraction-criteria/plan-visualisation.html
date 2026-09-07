@@ -1,0 +1,458 @@
+<title>Action Extraction Criteria</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#EDF1EE;
+    --surface:#FFFFFF;
+    --surface-2:#E3E9E4;
+    --ink:#182220;
+    --ink-muted:#5B6864;
+    --ink-faint:#8C978F;
+    --line:#D3DCD5;
+    --accent:#B87F26;
+    --accent-ink:#5B3D0F;
+    --accent-soft:#F3E4C8;
+    --good:#3C7A5A;
+    --good-soft:#DEEBE2;
+    --warn:#AE4A28;
+    --warn-soft:#F5DFD3;
+    --shadow: 0 1px 2px rgba(24,34,32,.06), 0 8px 24px -12px rgba(24,34,32,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121715;
+      --surface:#181F1C;
+      --surface-2:#202823;
+      --ink:#E9EFEA;
+      --ink-muted:#9CA9A2;
+      --ink-faint:#66756E;
+      --line:#2B3532;
+      --accent:#DDA243;
+      --accent-ink:#F6E3BC;
+      --accent-soft:#3A2E13;
+      --good:#6FBE95;
+      --good-soft:#1B3226;
+      --warn:#E38058;
+      --warn-soft:#3A2116;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#121715;
+    --surface:#181F1C;
+    --surface-2:#202823;
+    --ink:#E9EFEA;
+    --ink-muted:#9CA9A2;
+    --ink-faint:#66756E;
+    --line:#2B3532;
+    --accent:#DDA243;
+    --accent-ink:#F6E3BC;
+    --accent-soft:#3A2E13;
+    --good:#6FBE95;
+    --good-soft:#1B3226;
+    --warn:#E38058;
+    --warn-soft:#3A2116;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.5);
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; text-wrap:balance; margin:0; }
+  code, .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding: 48px 32px 96px; }
+
+  /* ---- Header ---- */
+  .masthead{
+    display:flex; align-items:baseline; justify-content:space-between; gap:24px;
+    padding-bottom:22px; border-bottom:1px solid var(--line); margin-bottom:36px;
+    flex-wrap:wrap;
+  }
+  .masthead .eyebrow{
+    font-size:.72rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:600; margin-bottom:6px;
+  }
+  .masthead h1{ font-size:2.15rem; font-weight:600; color:var(--ink); }
+  .masthead .feature-id{ color:var(--ink-faint); font-weight:400; }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:7px;
+    background:var(--surface); border:1px solid var(--line); border-radius:999px;
+    padding:7px 14px 7px 10px; font-size:.82rem; font-weight:500; color:var(--ink-muted);
+    box-shadow:var(--shadow); white-space:nowrap;
+  }
+  .status-pill .dot{ width:8px; height:8px; border-radius:50%; background:var(--accent); }
+
+  /* ---- Layout: rail + content ---- */
+  .layout{ display:grid; grid-template-columns: 240px 1fr; gap:40px; align-items:start; }
+  @media (max-width: 860px){ .layout{ grid-template-columns: 1fr; } }
+
+  /* ---- Pipeline rail ---- */
+  .rail{
+    position:sticky; top:24px;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:22px 18px; box-shadow:var(--shadow);
+  }
+  .rail h2{ font-size:.72rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; margin-bottom:16px; }
+  .stage{ position:relative; padding:0 0 22px 26px; }
+  .stage:last-child{ padding-bottom:0; }
+  .stage::before{
+    content:""; position:absolute; left:6px; top:22px; bottom:-2px; width:1px; background:var(--line);
+  }
+  .stage:last-child::before{ display:none; }
+  .stage .node{
+    position:absolute; left:0; top:2px; width:13px; height:13px; border-radius:50%;
+    background:var(--surface); border:2px solid var(--ink-faint);
+  }
+  .stage.done .node{ background:var(--good); border-color:var(--good); }
+  .stage.active .node{ background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+  .stage .label{ font-weight:600; font-size:.92rem; color:var(--ink); }
+  .stage .sub{ font-size:.78rem; color:var(--ink-faint); margin-top:2px; }
+  .stage.active .label{ color:var(--accent-ink); }
+
+  /* ---- Content sections ---- */
+  section{ margin-bottom:40px; }
+  section > h2{
+    font-size:1.32rem; font-weight:600; margin-bottom:14px;
+    display:flex; align-items:baseline; gap:10px;
+  }
+  section > h2 .idx{ font-size:.78rem; color:var(--ink-faint); font-weight:500; font-family:"IBM Plex Mono", monospace; }
+  .lede{ color:var(--ink-muted); font-size:1rem; line-height:1.65; max-width:66ch; margin-bottom:18px; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:24px 26px; box-shadow:var(--shadow);
+  }
+
+  /* ---- Filter diagram ---- */
+  .filter-card{ overflow-x:auto; }
+  .filter-card svg{ display:block; min-width:640px; width:100%; height:auto; }
+  .filter-caption{ font-size:.85rem; color:var(--ink-faint); margin-top:12px; }
+
+  /* ---- Requirements table ---- */
+  .table-scroll{ overflow-x:auto; border-radius:14px; border:1px solid var(--line); box-shadow:var(--shadow); }
+  table{ width:100%; border-collapse:collapse; background:var(--surface); font-size:.9rem; min-width:640px; }
+  thead th{
+    text-align:left; font-size:.72rem; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:600; padding:12px 16px; border-bottom:1px solid var(--line);
+    background:var(--surface-2);
+  }
+  tbody td{ padding:13px 16px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--ink); }
+  tbody tr:last-child td{ border-bottom:none; }
+  td.id{ font-family:"IBM Plex Mono", monospace; color:var(--ink-muted); white-space:nowrap; }
+  .req-desc{ color:var(--ink-muted); font-size:.87rem; }
+
+  .badge{
+    display:inline-block; padding:3px 9px; border-radius:6px; font-size:.72rem; font-weight:600;
+    letter-spacing:.02em;
+  }
+  .badge.include{ background:var(--good-soft); color:var(--good); }
+  .badge.exclude{ background:var(--warn-soft); color:var(--warn); }
+
+  /* ---- Two column grid ---- */
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:700px){ .grid-2{ grid-template-columns:1fr; } }
+
+  /* ---- Success metric tile ---- */
+  .metric{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px;
+  }
+  .metric .num{ font-family:"Fraunces", serif; font-size:2.1rem; font-weight:600; color:var(--accent-ink); font-variant-numeric:tabular-nums; }
+  .metric .num small{ font-size:1.1rem; font-weight:500; color:var(--ink-faint); }
+  .metric .desc{ font-size:.85rem; color:var(--ink-muted); line-height:1.5; }
+  .metric-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width:700px){ .metric-row{ grid-template-columns:1fr; } }
+
+  /* ---- Constitution checklist ---- */
+  .principle-list{ display:flex; flex-direction:column; gap:0; }
+  .principle{
+    display:grid; grid-template-columns:22px 1fr auto; gap:14px; align-items:start;
+    padding:14px 0; border-bottom:1px solid var(--line);
+  }
+  .principle:last-child{ border-bottom:none; }
+  .principle .check{
+    width:20px; height:20px; border-radius:50%; background:var(--good-soft); color:var(--good);
+    display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; margin-top:2px;
+  }
+  .principle .name{ font-weight:600; font-size:.92rem; }
+  .principle .note{ font-size:.83rem; color:var(--ink-muted); margin-top:3px; line-height:1.5; }
+  .principle .pass{
+    font-size:.7rem; font-weight:700; letter-spacing:.06em; color:var(--good);
+    background:var(--good-soft); padding:4px 10px; border-radius:999px; white-space:nowrap; align-self:start;
+  }
+
+  /* ---- Scope split ---- */
+  .scope-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:700px){ .scope-grid{ grid-template-columns:1fr; } }
+  .scope-card h3{ font-size:.95rem; font-weight:600; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .scope-card ul{ margin:0; padding-left:20px; color:var(--ink-muted); font-size:.87rem; line-height:1.75; }
+  .scope-card.in h3{ color:var(--good); }
+  .scope-card.out h3{ color:var(--ink-faint); }
+
+  footer{
+    margin-top:8px; padding-top:20px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    color:var(--ink-faint); font-size:.8rem;
+  }
+  footer .mono{ color:var(--ink-faint); }
+</style>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">me.compass · specs/002-action-extraction-criteria</div>
+      <h1>Action Extraction Criteria <span class="feature-id">— plan</span></h1>
+    </div>
+    <div class="status-pill"><span class="dot"></span>Plan complete · ready for tasks</div>
+  </div>
+
+  <div class="layout">
+
+    <!-- RAIL -->
+    <nav class="rail">
+      <h2>Ignite pipeline</h2>
+      <div class="stage done">
+        <div class="node"></div>
+        <div class="label">Intent</div>
+        <div class="sub">intent.md · captured</div>
+      </div>
+      <div class="stage done">
+        <div class="node"></div>
+        <div class="label">Brief</div>
+        <div class="sub">brief.md · approved</div>
+      </div>
+      <div class="stage done">
+        <div class="node"></div>
+        <div class="label">Spec</div>
+        <div class="sub">spec.md · 0 open questions</div>
+      </div>
+      <div class="stage active">
+        <div class="node"></div>
+        <div class="label">Plan</div>
+        <div class="sub">research · data model · quickstart</div>
+      </div>
+      <div class="stage">
+        <div class="node"></div>
+        <div class="label">Tasks</div>
+        <div class="sub">/speckit-tasks · not started</div>
+      </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <main>
+
+      <section>
+        <h2><span class="idx">§ summary</span></h2>
+        <p class="lede">
+          The extraction step shared by email, chat, and meeting-notes sync has no defined
+          criteria for what counts as an actionable item — the current prompt only says
+          "actionable to-dos owed by the reader," never deliberately scoped. This plan rewrites
+          that prompt's judgment rules. No new module, no schema change, no new dependency —
+          the change lives entirely inside <code>ClaudeCliService.extractActions()</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2><span class="idx">§ 1</span>How an item gets classified</h2>
+        <div class="card filter-card">
+          <svg viewBox="0 0 1000 300" role="img" aria-label="Raw items pass through three criteria gates, then are included or excluded">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"></path>
+              </marker>
+            </defs>
+
+            <!-- source column -->
+            <text x="18" y="34" class="mono" font-size="12" fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace">SOURCES</text>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13" fill="var(--ink)">
+              <rect x="14" y="52" width="118" height="34" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect>
+              <text x="73" y="73" text-anchor="middle">Email</text>
+              <rect x="14" y="96" width="118" height="34" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect>
+              <text x="73" y="117" text-anchor="middle">Chat</text>
+              <rect x="14" y="140" width="118" height="34" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect>
+              <text x="73" y="161" text-anchor="middle">Meeting notes</text>
+            </g>
+            <line x1="132" y1="113" x2="185" y2="113" stroke="var(--ink-faint)" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+            <!-- gates -->
+            <g font-family="IBM Plex Sans, sans-serif">
+              <rect x="190" y="36" width="190" height="154" rx="12" fill="var(--surface)" stroke="var(--line)"></rect>
+              <text x="285" y="60" text-anchor="middle" font-size="11" letter-spacing=".06em" fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace">GATE 1 · FR-001/002</text>
+              <text x="285" y="86" text-anchor="middle" font-size="13.5" fill="var(--ink)" font-weight="600">Involves the user?</text>
+              <text x="212" y="110" font-size="12" fill="var(--ink-muted)">Asked of them, or</text>
+              <text x="212" y="128" font-size="12" fill="var(--ink-muted)">a commitment they</text>
+              <text x="212" y="146" font-size="12" fill="var(--ink-muted)">made themselves</text>
+              <text x="212" y="172" font-size="11.5" fill="var(--warn)">else → excluded (FR-003)</text>
+            </g>
+            <line x1="380" y1="113" x2="433" y2="113" stroke="var(--ink-faint)" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+            <g font-family="IBM Plex Sans, sans-serif">
+              <rect x="438" y="36" width="190" height="154" rx="12" fill="var(--surface)" stroke="var(--line)"></rect>
+              <text x="533" y="60" text-anchor="middle" font-size="11" letter-spacing=".06em" fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace">GATE 2 · FR-004</text>
+              <text x="533" y="86" text-anchor="middle" font-size="13.5" fill="var(--ink)" font-weight="600">Ambiguous?</text>
+              <text x="460" y="110" font-size="12" fill="var(--ink-muted)">Vague or uncertain,</text>
+              <text x="460" y="128" font-size="12" fill="var(--ink-muted)">but plausibly involves</text>
+              <text x="460" y="146" font-size="12" fill="var(--ink-muted)">the user</text>
+              <text x="460" y="172" font-size="11.5" fill="var(--good)">→ include anyway (recall-first)</text>
+            </g>
+            <line x1="628" y1="113" x2="681" y2="113" stroke="var(--ink-faint)" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+            <g font-family="IBM Plex Sans, sans-serif">
+              <rect x="686" y="36" width="190" height="154" rx="12" fill="var(--surface)" stroke="var(--line)"></rect>
+              <text x="781" y="60" text-anchor="middle" font-size="11" letter-spacing=".06em" fill="var(--ink-faint)" font-family="IBM Plex Mono, monospace">GATE 3 · FR-005/006</text>
+              <text x="781" y="86" text-anchor="middle" font-size="13.5" fill="var(--ink)" font-weight="600">Same mechanism</text>
+              <text x="708" y="110" font-size="12" fill="var(--ink-muted)">Still one local</text>
+              <text x="708" y="128" font-size="12" fill="var(--ink-muted)">Claude CLI call,</text>
+              <text x="708" y="146" font-size="12" fill="var(--ink-muted)">same rule for all</text>
+              <text x="708" y="164" font-size="12" fill="var(--ink-muted)">3 sources</text>
+            </g>
+
+            <!-- outputs -->
+            <line x1="876" y1="90" x2="930" y2="60" stroke="var(--good)" stroke-width="1.4" marker-end="url(#arrow)"></line>
+            <line x1="876" y1="140" x2="930" y2="166" stroke="var(--warn)" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+            <rect x="932" y="34" width="60" height="44" rx="8" fill="var(--good-soft)"></rect>
+            <text x="962" y="61" text-anchor="middle" font-size="12" font-weight="700" fill="var(--good)" font-family="IBM Plex Sans, sans-serif">Action</text>
+
+            <rect x="932" y="150" width="60" height="44" rx="8" fill="var(--warn-soft)"></rect>
+            <text x="962" y="177" text-anchor="middle" font-size="11" font-weight="700" fill="var(--warn)" font-family="IBM Plex Sans, sans-serif">Discard</text>
+
+            <text x="500" y="250" text-anchor="middle" font-size="12.5" fill="var(--ink-muted)" font-family="IBM Plex Sans, sans-serif">
+              Every gate runs inside the same prompt to <code style="font-family:'IBM Plex Mono',monospace">ClaudeCliService.extractActions()</code> — no new call, no new service.
+            </text>
+          </svg>
+          <div class="filter-caption">Schematic — gates are criteria evaluated by one prompt, not separate pipeline steps.</div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="idx">§ 2</span>Functional requirements</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Requirement</th><th>Outcome</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="id">FR-001</td>
+                <td>Explicit ask directed at the user<div class="req-desc">"Can you send the deck by Friday?"</div></td>
+                <td><span class="badge include">Include</span></td>
+              </tr>
+              <tr>
+                <td class="id">FR-002</td>
+                <td>User states their own commitment<div class="req-desc">"I'll follow up with the vendor tomorrow"</div></td>
+                <td><span class="badge include">Include</span></td>
+              </tr>
+              <tr>
+                <td class="id">FR-003</td>
+                <td>Action assigned solely to someone else<div class="req-desc">"Sarah will update the deck" — no involvement from the user</div></td>
+                <td><span class="badge exclude">Exclude</span></td>
+              </tr>
+              <tr>
+                <td class="id">FR-004</td>
+                <td>Ambiguous but plausibly involves the user<div class="req-desc">"might be worth me looking into this at some point"</div></td>
+                <td><span class="badge include">Include</span></td>
+              </tr>
+              <tr>
+                <td class="id">FR-005</td>
+                <td>No new auth, API key, or billing path introduced<div class="req-desc">Stays on the local <code>claude</code> CLI subprocess</div></td>
+                <td><span class="badge include">Constraint</span></td>
+              </tr>
+              <tr>
+                <td class="id">FR-006</td>
+                <td>One shared criteria set across all sources<div class="req-desc">Email, chat, and meeting notes rules stay identical — not per-source</div></td>
+                <td><span class="badge include">Constraint</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="idx">§ 3</span>Success criteria</h2>
+        <div class="metric-row">
+          <div class="metric">
+            <div class="num">90<small>%+</small></div>
+            <div class="desc"><strong>SC-001</strong> — known real commitments involving the user that appear as extracted actions, measured over a sample batch</div>
+          </div>
+          <div class="metric">
+            <div class="num">0<small>%</small></div>
+            <div class="desc"><strong>SC-002</strong> — items assigned solely to other people that appear as extracted actions</div>
+          </div>
+          <div class="metric">
+            <div class="num">Self<small>-evident</small></div>
+            <div class="desc"><strong>SC-003</strong> — a reviewer can tell why each action was included, without extra context</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="idx">§ 4</span>Scope</h2>
+        <div class="scope-grid">
+          <div class="card scope-card in">
+            <h3>In scope</h3>
+            <ul>
+              <li>Rewriting the extraction prompt's classification criteria</li>
+              <li>Scoping to items involving the user directly</li>
+              <li>Recall-first bias on ambiguous items</li>
+              <li>Keeping the existing local Claude CLI mechanism</li>
+            </ul>
+          </div>
+          <div class="card scope-card out">
+            <h3>Out of scope</h3>
+            <ul>
+              <li>Confidence scores, stored or displayed</li>
+              <li>A review / triage queue or any UI change</li>
+              <li>Source fetching, sync scheduling, or auth changes</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="idx">§ 5</span>Constitution check</h2>
+        <div class="card">
+          <div class="principle-list">
+            <div class="principle">
+              <div class="check">✓</div>
+              <div><div class="name">I. Local-First</div><div class="note">No cloud dependency introduced; runs on the existing local Docker setup.</div></div>
+              <div class="pass">PASS</div>
+            </div>
+            <div class="principle">
+              <div class="check">✓</div>
+              <div><div class="name">II. No Separate AI Billing</div><div class="note">FR-005 keeps extraction on the local Claude CLI subprocess — no API key, no new billing.</div></div>
+              <div class="pass">PASS</div>
+            </div>
+            <div class="principle">
+              <div class="check">✓</div>
+              <div><div class="name">III. Modular by Construction</div><div class="note">Change is scoped to the existing service; no new module or plugin framework.</div></div>
+              <div class="pass">PASS</div>
+            </div>
+            <div class="principle">
+              <div class="check">✓</div>
+              <div><div class="name">IV. Review Before Action</div><div class="note">Affects which items become rows for the user to see — no AI-triggered send/execute side effect.</div></div>
+              <div class="pass">PASS</div>
+            </div>
+            <div class="principle">
+              <div class="check">✓</div>
+              <div><div class="name">V. Simplicity Over Speculative Infrastructure</div><div class="note">No schema change, no ORM, no new abstraction — the Action entity is reused as-is.</div></div>
+              <div class="pass">PASS</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>specs/002-action-extraction-criteria/plan.md</span>
+        <span class="mono">next: /speckit-tasks</span>
+      </footer>
+
+    </main>
+  </div>
+</div>
