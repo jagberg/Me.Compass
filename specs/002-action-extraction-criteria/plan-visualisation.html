@@ -207,7 +207,7 @@
   <div class="masthead">
     <div>
       <div class="eyebrow">me.compass · specs/002-action-extraction-criteria</div>
-      <h1>Action Extraction Criteria <span class="feature-id">— plan</span></h1>
+      <h1>Action Extraction Criteria <span class="feature-id">- plan</span></h1>
     </div>
     <div class="status-pill"><span class="dot"></span>Plan complete · ready for tasks</div>
   </div>
@@ -251,9 +251,9 @@
         <h2><span class="idx">§ summary</span></h2>
         <p class="lede">
           The extraction step shared by email, chat, and meeting-notes sync has no defined
-          criteria for what counts as an actionable item — the current prompt only says
+          criteria for what counts as an actionable item - the current prompt only says
           "actionable to-dos owed by the reader," never deliberately scoped. This plan rewrites
-          that prompt's judgment rules. No new module, no schema change, no new dependency —
+          that prompt's judgment rules. No new module, no schema change, no new dependency -
           the change lives entirely inside <code>ClaudeCliService.extractActions()</code>.
         </p>
       </section>
@@ -324,10 +324,10 @@
             <text x="962" y="177" text-anchor="middle" font-size="11" font-weight="700" fill="var(--warn)" font-family="IBM Plex Sans, sans-serif">Discard</text>
 
             <text x="500" y="250" text-anchor="middle" font-size="12.5" fill="var(--ink-muted)" font-family="IBM Plex Sans, sans-serif">
-              Every gate runs inside the same prompt to <code style="font-family:'IBM Plex Mono',monospace">ClaudeCliService.extractActions()</code> — no new call, no new service.
+              Every gate runs inside the same prompt to <code style="font-family:'IBM Plex Mono',monospace">ClaudeCliService.extractActions()</code> - no new call, no new service.
             </text>
           </svg>
-          <div class="filter-caption">Schematic — gates are criteria evaluated by one prompt, not separate pipeline steps.</div>
+          <div class="filter-caption">Schematic - gates are criteria evaluated by one prompt, not separate pipeline steps.</div>
         </div>
       </section>
 
@@ -351,7 +351,7 @@
               </tr>
               <tr>
                 <td class="id">FR-003</td>
-                <td>Action assigned solely to someone else<div class="req-desc">"Sarah will update the deck" — no involvement from the user</div></td>
+                <td>Action assigned solely to someone else<div class="req-desc">"Sarah will update the deck" - no involvement from the user</div></td>
                 <td><span class="badge exclude">Exclude</span></td>
               </tr>
               <tr>
@@ -366,7 +366,7 @@
               </tr>
               <tr>
                 <td class="id">FR-006</td>
-                <td>One shared criteria set across all sources<div class="req-desc">Email, chat, and meeting notes rules stay identical — not per-source</div></td>
+                <td>One shared criteria set across all sources<div class="req-desc">Email, chat, and meeting notes rules stay identical - not per-source</div></td>
                 <td><span class="badge include">Constraint</span></td>
               </tr>
             </tbody>
@@ -379,15 +379,15 @@
         <div class="metric-row">
           <div class="metric">
             <div class="num">90<small>%+</small></div>
-            <div class="desc"><strong>SC-001</strong> — known real commitments involving the user that appear as extracted actions, measured over a sample batch</div>
+            <div class="desc"><strong>SC-001</strong> - known real commitments involving the user that appear as extracted actions, measured over a sample batch</div>
           </div>
           <div class="metric">
             <div class="num">0<small>%</small></div>
-            <div class="desc"><strong>SC-002</strong> — items assigned solely to other people that appear as extracted actions</div>
+            <div class="desc"><strong>SC-002</strong> - items assigned solely to other people that appear as extracted actions</div>
           </div>
           <div class="metric">
             <div class="num">Self<small>-evident</small></div>
-            <div class="desc"><strong>SC-003</strong> — a reviewer can tell why each action was included, without extra context</div>
+            <div class="desc"><strong>SC-003</strong> - a reviewer can tell why each action was included, without extra context</div>
           </div>
         </div>
       </section>
@@ -426,7 +426,7 @@
             </div>
             <div class="principle">
               <div class="check">✓</div>
-              <div><div class="name">II. No Separate AI Billing</div><div class="note">FR-005 keeps extraction on the local Claude CLI subprocess — no API key, no new billing.</div></div>
+              <div><div class="name">II. No Separate AI Billing</div><div class="note">FR-005 keeps extraction on the local Claude CLI subprocess - no API key, no new billing.</div></div>
               <div class="pass">PASS</div>
             </div>
             <div class="principle">
@@ -436,12 +436,12 @@
             </div>
             <div class="principle">
               <div class="check">✓</div>
-              <div><div class="name">IV. Review Before Action</div><div class="note">Affects which items become rows for the user to see — no AI-triggered send/execute side effect.</div></div>
+              <div><div class="name">IV. Review Before Action</div><div class="note">Affects which items become rows for the user to see - no AI-triggered send/execute side effect.</div></div>
               <div class="pass">PASS</div>
             </div>
             <div class="principle">
               <div class="check">✓</div>
-              <div><div class="name">V. Simplicity Over Speculative Infrastructure</div><div class="note">No schema change, no ORM, no new abstraction — the Action entity is reused as-is.</div></div>
+              <div><div class="name">V. Simplicity Over Speculative Infrastructure</div><div class="note">No schema change, no ORM, no new abstraction - the Action entity is reused as-is.</div></div>
               <div class="pass">PASS</div>
             </div>
           </div>
