@@ -4,12 +4,12 @@ import { ActionCard } from "./ActionCard";
 export function NextStepsList({ actions, onChange }: { actions: Action[]; onChange: (updated: Action) => void }) {
   if (actions.length === 0) return null;
   return (
-    <section className="next-steps">
+    <section className="next-steps card">
       <h2>Today's next steps</h2>
       <ol>
-        {actions.map((action) => (
+        {actions.map((action, i) => (
           <li key={action.id}>
-            <ActionCard action={action} onChange={onChange} />
+            <ActionCard action={action} onChange={onChange} index={i + 1} />
           </li>
         ))}
       </ol>

@@ -4,10 +4,10 @@ export function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (mode
   return (
     <div className="view-toggle">
       <button disabled={mode === "list"} onClick={() => onChange("list")}>
-        Stacked list
+        List
       </button>
       <button disabled={mode === "panel"} onClick={() => onChange("panel")}>
-        2x2 panels
+        Panels
       </button>
     </div>
   );

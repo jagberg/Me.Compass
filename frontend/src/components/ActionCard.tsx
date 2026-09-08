@@ -6,11 +6,29 @@ function isOverdue(action: Action): boolean {
   return action.status === "open" && action.due_date !== null && action.due_date < new Date().toISOString().slice(0, 10);
 }
 
-export function ActionCard({ action, onChange }: { action: Action; onChange: (updated: Action) => void }) {
+function isToday(action: Action): boolean {
+  return action.due_date === new Date().toISOString().slice(0, 10);
+}
+
+function DueBadge({ action }: { action: Action }) {
+  if (!action.due_date) return <span className="pill pill--none">no date</span>;
+  if (isOverdue(action)) return <span className="pill pill--overdue">overdue</span>;
+  if (isToday(action)) return <span className="pill pill--today">Today</span>;
+  return <span className="pill pill--upcoming">{action.due_date}</span>;
+}
+
+export function ActionCard({
+  action,
+  onChange,
+  index,
+}: {
+  action: Action;
+  onChange: (updated: Action) => void;
+  index?: number;
+}) {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
-
-  const overdue = isOverdue(action);
+  const [editing, setEditing] = useState(false);
 
   async function handleRun() {
     setRunning(true);
@@ -38,47 +56,70 @@ export function ActionCard({ action, onChange }: { action: Action; onChange: (up
     onChange(await updateAction(action.id, { status: "done" }));
   }
 
+  const subtitle = action.suggested_next_step ?? action.description;
+
   return (
-    <div className={`action-card${overdue ? " action-card--overdue" : ""}`}>
-      <div className="action-card__header">
-        <strong>{action.title}</strong>
-        {overdue && <span className="badge badge--overdue">Overdue</span>}
-      </div>
-      <p>{action.description}</p>
-      <div className="action-card__meta">
-        <label>
-          Due:{" "}
-          <input
-            type="date"
-            value={action.due_date ?? ""}
-            onChange={(e) => handleDueDateChange(e.target.value)}
-          />
-          {action.due_date_inferred && <span className="badge">inferred</span>}
-        </label>
-        <label>
-          Priority:{" "}
-          <select value={action.priority ?? ""} onChange={(e) => handlePriorityChange(e.target.value)}>
-            <option value="">—</option>
-            <option value="high">high</option>
-            <option value="medium">medium</option>
-            <option value="low">low</option>
-          </select>
-        </label>
-        {action.source_url && (
-          <a href={action.source_url} target="_blank" rel="noreferrer">
-            source
-          </a>
+    <div className="action-row-wrap">
+      <div className="action-row">
+        {index !== undefined ? (
+          <div className="action-row__index">{index}</div>
+        ) : (
+          <div className={`action-row__dot action-row__dot--${action.priority ?? "low"}`} />
         )}
-      </div>
-      <div className="action-card__actions">
-        {action.suggested_next_step && (
-          <button onClick={handleRun} disabled={running}>
-            {running ? "Running…" : "Run"}
+        <div className="action-row__body">
+          <div className="action-row__title-line">
+            <span>{action.title}</span>
+          </div>
+          {subtitle && (
+            <div className="action-row__sub" title={subtitle}>
+              {action.suggested_next_step && <span className="action-row__sub-arrow">→</span>}
+              {subtitle}
+            </div>
+          )}
+        </div>
+        <div className="action-row__right">
+          <DueBadge action={action} />
+          {action.due_date_inferred && <span className="pill pill--inferred">inferred</span>}
+          {action.suggested_next_step && (
+            <button className="btn-run" onClick={handleRun} disabled={running}>
+              {running ? "Running…" : "Run"}
+            </button>
+          )}
+          <button className="action-row__toggle" onClick={() => setEditing((v) => !v)} aria-label="Edit">
+            ⋯
           </button>
-        )}
-        <button onClick={handleDone}>Done</button>
-        <button onClick={handleDismiss}>Dismiss</button>
+        </div>
       </div>
+
+      {editing && (
+        <div className="action-row__edit">
+          <label>
+            Due:{" "}
+            <input type="date" value={action.due_date ?? ""} onChange={(e) => handleDueDateChange(e.target.value)} />
+          </label>
+          <label>
+            Priority:{" "}
+            <select value={action.priority ?? ""} onChange={(e) => handlePriorityChange(e.target.value)}>
+              <option value="">—</option>
+              <option value="high">high</option>
+              <option value="medium">medium</option>
+              <option value="low">low</option>
+            </select>
+          </label>
+          {action.source_url && (
+            <a href={action.source_url} target="_blank" rel="noreferrer">
+              source
+            </a>
+          )}
+          <button className="link-btn" onClick={handleDone}>
+            Done
+          </button>
+          <button className="link-btn" onClick={handleDismiss}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {runResult && (
         <div className={`run-result run-result--${runResult.status}`}>
           <em>Draft result (not sent):</em>
