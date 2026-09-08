@@ -124,3 +124,31 @@ One real bug found and fixed during the build: `apiFetch` set
 Fastify rejected as malformed — now conditional on a body being present.
 **Alternatives rejected:** n/a
 **Supersedes:** n/a
+
+## 2026-09-07 - Action extraction criteria defined: recall-first, scoped to the user
+
+**Decision:** `ClaudeCliService.extractActions()`'s prompt now defines explicit
+criteria: include an item when it's an explicit ask of the user or a
+commitment the user made themselves; exclude items assigned solely to
+someone else; when ambiguous, include rather than drop. Same criteria apply
+uniformly across email, chat, and meeting notes - no per-source rules.
+**Reasoning:** The extraction step was built (see "v1 action sources" entry
+above) before anyone decided what "actionable" meant. Recall was chosen over
+precision because there's no triage/review UI yet, so a missed item is
+currently unrecoverable except by re-reading the source manually - the exact
+problem this feature exists to solve.
+**Trade-off accepted:** No confidence scoring or triage queue; a recall-first
+bias means more noise may reach the actions list than a precision-first
+approach would produce. Verification (`specs/002-action-extraction-criteria/
+quickstart.md` scenarios and the SC-001/SC-002 sample-batch review) requires
+live-synced real data and human judgment, and was not run as part of this
+change - it's a follow-up for whoever has an active Google OAuth connection.
+**Alternatives rejected:** a fixed keyword/regex rule engine (rejected -
+would miss implicit commitments the way the existing Drive "next steps"
+regex already does for meeting notes); precision-first classification
+(rejected per the approved brief - recall was explicitly preferred);
+confidence-scored triage queue (deferred - needs new storage/UI, out of
+scope for this feature).
+**Supersedes:** the open questions in
+`intent/action-extraction-criteria/intent.md` and
+`specs/002-action-extraction-criteria/spec.md`.

@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "3000:3000"
+      - "51789:51789"
     environment:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}

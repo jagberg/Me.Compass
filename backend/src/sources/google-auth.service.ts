@@ -10,6 +10,9 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/chat.messages.readonly",
+  // Listing spaces (chat.spaces.list) needs this; chat.messages.readonly alone returns
+  // "Insufficient Permission". Requires the Google Chat API enabled in the Cloud project.
+  "https://www.googleapis.com/auth/chat.spaces.readonly",
 ];
 
 /** Shared OAuth for Gmail/Drive/Chat: one installed-app client, one token file, all three scopes at once. */
