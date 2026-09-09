@@ -15,11 +15,16 @@ export class SourcesController {
     return this.repo.getAll();
   }
 
+  @Post("sync-all")
+  async syncAll() {
+    return this.service.syncAll();
+  }
+
   @Post(":type/sync")
   async sync(@Param("type") type: ConnectionSourceType) {
     try {
-      const { actionsCreated } = await this.service.sync(type);
-      return { source: this.repo.getOne(type), actions_created: actionsCreated };
+      const result = await this.service.sync(type);
+      return { source: this.repo.getOne(type), ...result };
     } catch {
       throw new HttpException(this.repo.getOne(type) ?? {}, 502);
     }

@@ -9,9 +9,9 @@ export class ActionsController {
   @Get()
   list(@Query("status") status?: Status, @Query("group_by") groupBy?: string) {
     const effectiveStatus = status ?? "open";
-    return groupBy === "source"
-      ? this.service.listGroupedBySource(effectiveStatus)
-      : this.service.list(effectiveStatus);
+    if (groupBy === "category") return this.service.listGroupedByCategory(effectiveStatus);
+    if (groupBy === "source") return this.service.listGroupedBySource(effectiveStatus);
+    return this.service.list(effectiveStatus);
   }
 
   @Get("today")
@@ -28,11 +28,24 @@ export class ActionsController {
   @Patch(":id")
   update(
     @Param("id") id: string,
-    @Body() body: { due_date?: string; priority?: string; status?: string },
+    @Body()
+    body: {
+      due_date?: string | null;
+      priority?: string;
+      status?: string;
+      category_id?: string | null;
+      conflict?: boolean;
+      stale_review?: boolean;
+    },
   ) {
     const updated = this.service.update(id, body as never);
     if (!updated) throw new HttpException("Action not found", 404);
     return updated;
+  }
+
+  @Post(":id/split")
+  split(@Param("id") id: string) {
+    return this.service.split(id);
   }
 
   @Post(":id/run")

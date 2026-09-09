@@ -5,6 +5,9 @@ import { GoogleAuthService } from "./google-auth.service";
 export interface RawSourceItem {
   rawText: string;
   sourceUrl: string;
+  /** True when the transcript was cut at the char cap, so an ask past the cut may be missing.
+   * Truncated items must not count as a full read for stale gating (FR-018). */
+  truncated: boolean;
 }
 
 // Cap the text we hand the extractor per thread, so a long back-and-forth stays within a
@@ -31,13 +34,15 @@ export class GmailClient {
     return parts.map((p) => this.extractBody(p)).join("\n");
   }
 
-  /** Fetches unread threads since `sinceIso` (or recent threads on first sync), one item per thread. */
+  /** Fetches threads with activity since `sinceIso` (or recent threads on first sync), one item per thread. */
   async fetchSince(sinceIso: string | null): Promise<RawSourceItem[]> {
     const authClient = await this.auth.getClient();
     const gmail = google.gmail({ version: "v1", auth: authClient });
+    // Do NOT filter to is:unread: an ask in an email the user has already opened (e.g. read on
+    // their phone) still owes them an action, so read state must not gate extraction.
     const query = sinceIso
-      ? `is:unread after:${Math.floor(new Date(sinceIso).getTime() / 1000)}`
-      : "is:unread newer_than:7d";
+      ? `after:${Math.floor(new Date(sinceIso).getTime() / 1000)}`
+      : "newer_than:7d";
     const list = await gmail.users.threads.list({ userId: "me", q: query, maxResults: 25 });
     const items: RawSourceItem[] = [];
     for (const thread of list.data.threads ?? []) {
@@ -59,12 +64,12 @@ export class GmailClient {
           const body = this.extractBody(msg.payload).trim() || msg.snippet || "";
           return `From: ${from}\nDate: ${date}\n${body}`;
         })
-        .join("\n\n---\n\n")
-        .slice(0, MAX_THREAD_CHARS);
+        .join("\n\n---\n\n");
 
       items.push({
-        rawText: `Subject: ${subject}\n\n${transcript}`,
+        rawText: `Subject: ${subject}\n\n${transcript.slice(0, MAX_THREAD_CHARS)}`,
         sourceUrl: `https://mail.google.com/mail/u/0/#inbox/${thread.id}`,
+        truncated: transcript.length > MAX_THREAD_CHARS,
       });
     }
     return items;

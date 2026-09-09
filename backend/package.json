@@ -4,8 +4,9 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-migrations.js",
     "start": "node dist/main.js",
+    "serve": "node scripts/serve.js",
     "dev": "tsc -p tsconfig.json -w"
   },
   "dependencies": {

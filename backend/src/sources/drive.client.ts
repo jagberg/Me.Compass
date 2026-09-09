@@ -30,6 +30,7 @@ export class DriveClient {
       items.push({
         rawText: `Doc: ${file.name}\n${text}`,
         sourceUrl: file.webViewLink ?? `https://docs.google.com/document/d/${file.id}`,
+        truncated: false, // full doc text read; no cap applied
       });
     }
     return items;
