@@ -36,3 +36,9 @@
   exploration map resolved the technical unknowns (held for the plan stage, not the spec).
 - The correction path (FR-007, FR-013) is deliberately spec'd as first-class because merge and
   categorisation are fallible judgement calls.
+- Two review rounds addressed: a high-effort code-review (8 findings: NULL-key match, re-file
+  overwrite, split rebuild, UPDATE SQL, boolean coercion, stale gating, chat sender, em-dashes)
+  and the codex-review-feedback.md handoff (8 findings: split survival via merge_exception,
+  existing-backlog backfill, stale gated on successful read, resolved-task suppression, dedup
+  identity rules, category pinning, ordering comparator, labelled-sample metric). All confirmed
+  gaps are reflected in FR-015..FR-021, SC-001..SC-008, and the data model.

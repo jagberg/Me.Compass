@@ -99,9 +99,9 @@ category-management screen.
 
 **Acceptance Scenarios**:
 
-1. **Given** categorised actions, **When** the board renders, **Then** categories are ordered by
-   their most-urgent item and each line shows a source indicator, the work title, its next step,
-   and the due status.
+1. **Given** categorised actions, **When** the board renders, **Then** user categories are ordered
+   by their most-urgent item per the FR-021 comparator with Uncategorised always last, and each
+   line shows a source indicator, the work title, its next step, and the due status.
 2. **Given** a line with a next step, **When** the user triggers the draft control, **Then** a
    draft of that next step is produced for review, with nothing sent externally.
 3. **Given** the board, **When** the user changes the view control, **Then** it switches between
@@ -124,7 +124,18 @@ category-management screen.
 - What happens when a category with actions still in it is deleted? Its actions return to
   Uncategorised rather than disappearing.
 - What happens when a chat space is inaccessible on the user's account? That source degrades to
-  an error state without blocking the others (existing behaviour, preserved).
+  an error state without blocking the others (existing behaviour, preserved). Its actions are NOT
+  stale-flagged, because the conversation was not successfully read (FR-018).
+- What happens when the same recurring request appears again (e.g. next fortnight's payroll)? It
+  is a new instance with a distinct identity and appears as a new action, even if a prior period's
+  action was completed (FR-015, FR-016).
+- What happens when the user splits a merged action and then syncs again? The separated items stay
+  separate; the remembered separation prevents them re-merging (FR-017).
+- What happens when existing (pre-feature) duplicate actions are already in the list? On first
+  upgrade they are consolidated once, keeping manual edits and status (FR-019).
+- What happens when the most-urgent action overall is in Uncategorised? Uncategorised still renders
+  last; the urgency ordering (FR-021) applies among user categories, and SC-004 is judged
+  excluding Uncategorised.
 
 ## Requirements *(mandatory)*
 
@@ -160,6 +171,29 @@ category-management screen.
 - **FR-014**: When a re-sync re-reads a source and it no longer yields a matching item for an
   already-open action (the ask was resolved after the last sync), the system MUST flag that
   action as possibly-resolved for the user to confirm, and MUST NOT close it automatically.
+- **FR-015**: The system MUST use a defined identity rule to decide when two extracted items are
+  the same task: paraphrases and restatements of the same instance resolve to the same identity;
+  distinct instances of a recurring request (e.g. two different pay periods, two different
+  tickets) resolve to different identities and MUST NOT be collapsed. Two items are treated as the
+  same task only when their identity is confirmed equivalent, not merely textually similar.
+- **FR-016**: The system MUST NOT recreate an action for an ask that was previously completed or
+  dismissed: a re-extracted item whose identity matches a resolved action is suppressed, while a
+  genuinely new instance of a recurring request (a different identity) is created as normal.
+- **FR-017**: When the user separates a wrongly-merged action (FR-013), the system MUST remember
+  that separation so the same items are not re-merged on subsequent syncs.
+- **FR-018**: Stale flagging (FR-014) MUST only apply when the relevant source conversation was
+  read successfully and in full on that sync. A failed, skipped, truncated, or rate-limited read
+  MUST NOT be treated as evidence that an action is resolved.
+- **FR-019**: On first upgrade, the system MUST bring existing actions into the digest: derive an
+  identity and requester for them and consolidate the existing duplicate backlog once, preserving
+  each surviving action's manual edits (due date, priority, category) and status.
+- **FR-020**: An explicit category assignment made by the user - including explicitly choosing
+  Uncategorised - MUST persist and MUST NOT be overwritten by automatic filing on later syncs.
+  Automatic filing only applies to actions the user has not explicitly assigned.
+- **FR-021**: The board's ordering MUST follow a defined comparator: overdue before due-today
+  before future-dated before undated; within a bucket, sooner due date first; then higher priority
+  first; then earlier-created first. A category is ranked by its most-urgent action under this
+  comparator. Uncategorised is always shown last regardless of its contents.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -171,25 +205,41 @@ category-management screen.
   reserved bucket, not a user category.
 - **Requester**: Who is asking for an action - a person or a role - derived from the source item,
   attached to each action.
-- **Merge relationship**: The link that records that several extracted items represent one real
-  action (and lets a wrong merge be undone).
+- **Task identity**: The rule and signature that decide whether two extracted items are the same
+  task (paraphrases of one instance) or different tasks (distinct recurring instances). Anchors
+  merging, suppression of resolved tasks, and separation decisions.
+- **Merge relationship**: The record that several extracted items represent one real action,
+  holding enough of each to rebuild them and to remember a user's separation so a wrong merge is
+  undoable and does not recur.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: On a sample sync, fewer than 5% of displayed actions are duplicates of another
+Measured on a **labelled sample**: a batch of raw source items hand-labelled with the true set of
+distinct tasks and their correct requester/category, so accuracy - not just counts - is checked.
+
+- **SC-001**: On the labelled sample, fewer than 5% of displayed actions are duplicates of another
   displayed action (baseline ~60%).
-- **SC-002**: 100% of displayed actions show a requester (a name or a role); none are blank
-  except manually created ones.
-- **SC-003**: 100% of displayed actions are either filed under a user category or visible in the
+- **SC-002 (no loss / recall)**: On the labelled sample, at least 95% of the true distinct tasks
+  appear exactly once, and zero true distinct tasks are lost by over-merging - preserving feature
+  002's recall-first intent. A merge that drops a real task is a failure even if it lowers the
+  duplicate count.
+- **SC-003**: 100% of displayed actions show a requester (a name or a role); none are blank except
+  manually created ones.
+- **SC-004**: 100% of displayed actions are either filed under a user category or visible in the
   Uncategorised bucket - none are unreachable.
-- **SC-004**: On the board, the category containing the single most-urgent action appears first,
-  verifiable by inspection against the actions' due dates and priorities.
-- **SC-005**: A wrongly merged pair and a mis-filed action can each be corrected by the user, and
-  the correction survives the next sync.
-- **SC-006**: An action whose source was resolved after syncing is flagged for review on the next
-  re-sync of that source (not left open indefinitely, not auto-closed).
+- **SC-005**: On the board, the user category (excluding Uncategorised) containing the single
+  most-urgent action - per the FR-021 comparator - appears first; Uncategorised always appears
+  last.
+- **SC-006**: A wrongly merged pair (split), a mis-filed action (re-file), and an explicit
+  Uncategorised choice each survive the next sync; a previously completed ask is not recreated
+  while a new recurring instance is.
+- **SC-007**: An action whose source was resolved after syncing is flagged for review on the next
+  successful full re-sync of that source; an action whose source failed/truncated on that sync is
+  NOT flagged.
+- **SC-008**: After first upgrade, the existing duplicate backlog is consolidated once, and each
+  surviving action keeps its prior manual edits and status.
 
 ## Assumptions
 

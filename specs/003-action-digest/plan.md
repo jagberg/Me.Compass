@@ -82,20 +82,21 @@ backend/
 │   ├── db/
 │   │   ├── migrate.ts               # add a schema_migrations ledger (prerequisite)
 │   │   └── migrations/
-│   │       └── 002_action_digest.sql  # category table + action columns (idempotent via ledger)
+│   │       └── 002_action_digest.sql  # category + merge_exception tables, action columns (via ledger)
 │   ├── actions/
-│   │   ├── actions.repository.ts    # add fields to insert/mapper/update whitelist
-│   │   ├── actions.service.ts       # group_by=category; re-file; split-merge
-│   │   └── actions.controller.ts    # group_by=category branch; category PATCH
+│   │   ├── actions.repository.ts    # add fields to insert/mapper/update whitelist (+ UPDATE SQL)
+│   │   ├── actions.service.ts       # group_by=category (comparator); re-file (+pin); split (+exception)
+│   │   └── actions.controller.ts    # group_by=category branch; category PATCH; /:id/split
 │   ├── categories/                  # NEW module: taxonomy CRUD + filing rules
 │   │   ├── categories.controller.ts
 │   │   ├── categories.service.ts
 │   │   └── categories.repository.ts
 │   ├── sources/
-│   │   ├── chat.client.ts           # thread/space-aware transcript assembly
-│   │   └── sources.service.ts       # sync-all entrypoint + post-fetch reconcile seam
+│   │   ├── chat.client.ts           # thread/space-aware transcript assembly (+ per-msg sender)
+│   │   └── sources.service.ts       # sync-all + reconcile: identity dedup, suppression, filing,
+│   │                                #   conflict, gated stale-flag, one-time backfill
 │   └── claude/
-│       └── claude-cli.service.ts    # requested_by in ExtractedAction + prompt; conflict flag
+│       └── claude-cli.service.ts    # requested_by + canonical dedup_key in ExtractedAction/prompt
 └── (no test dir - see Technical Context)
 
 frontend/

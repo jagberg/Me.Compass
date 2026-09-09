@@ -4,6 +4,30 @@ Dated, append-only record of decisions for Me.Compass. See `docs/adr/` for
 the decisions substantial enough to warrant a full ADR (hard to reverse,
 surprising without context, real trade-off).
 
+## 2026-09-08 - Action digest: cross-source de-duplication, requester, categories, priority board
+
+**Decision:** Add a post-fetch reconcile pass that collapses duplicate
+actions across Gmail/Chat/meeting notes to one per real task, attributes each
+to a requester, files it into a user-maintained category taxonomy, and
+presents the result as a priority-first category board. Chat extraction is now
+thread/space-aware (whole-thread transcripts, not per-message). Feature
+`003-action-digest`.
+**Reasoning:** The raw per-source list produced the same task several times
+(payroll approval twice, all-hands once per message), gave no sense of who
+was asking, and had no grouping the user could shape over time. The reconcile
+seam is the one place to hang dedup, suppression of already-resolved asks,
+filing, stale-flagging, and conflict detection.
+**Trade-off accepted:** Reconcile runs the local Claude CLI for equivalence
+and filing checks, so a sync costs more model calls; identity is anchored on a
+`verb:subject[:instance]` `dedup_key`, so a same-key/same-text split can
+re-merge on a later sync (documented limitation, content-anchored identity is
+the real fix).
+**Alternatives rejected:** merging inline during fetch (no cross-source view);
+storing merged children as rows (chose `merged_from` content snapshots on the
+survivor so a split rebuilds them without a re-fetch).
+**Supersedes:** n/a
+**Detail:** `specs/003-action-digest/`, `docs/design/action-views-prototypes.md`
+
 ## 2026-09-07 - Personal Action Manager confirmed as a build, not a buy
 
 **Decision:** Build a custom personal action-management app rather than

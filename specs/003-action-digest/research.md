@@ -107,3 +107,86 @@ icons, title + next step, circular play, view switch) is a display concern.
 source-grouped body in `Dashboard.tsx`, `CategoryColumn` derives from `SourceGroup`, `ActionCard`
 gains requester + a re-file control, and the view switch toggles two-column / single / manage.
 No server-side rendering change beyond the grouping branch and category endpoints.
+
+## Decision: Task identity is a canonical, instance-qualified key + model equivalence fallback
+
+**Rationale (addresses review findings on key stability and recurring tasks)**: exact string
+equality on a free-form model-minted key both under-merges (paraphrases drift to different keys)
+and over-merges (two pay periods collapse). FR-015/FR-016 need a defined identity.
+
+**Approach**: the extractor emits `dedup_key` in a canonical `verb:subject[:instance]` form
+(lowercase, trimmed), including an instance qualifier (ticket id, pay period, date bucket) so
+recurring occurrences diverge. Reconcile treats an exact normalised-key match as "same"; for
+close-but-not-equal candidates it uses a model equivalence check (same task? yes/no) to catch
+paraphrase drift, then adopts one canonical key. NULL keys never match. Full rules + a worked
+table live in `data-model.md`.
+
+**Alternatives considered**: pure string equality (rejected - the review's exact concern); an
+embedding-similarity threshold (rejected - adds infra and a tuning knob; the model equivalence
+check is simpler and matches the local-CLI approach, Principle II/V).
+
+## Decision: Suppress previously-resolved asks; recurring instances are new
+
+**Rationale (addresses "completed work reappears")**: reconcile matching only `open` actions lets
+a re-extracted, already-done ask become a fresh open action.
+
+**Approach**: reconcile matches candidate identities against `done`/`dismissed` actions within a
+lookback window as well as `open` ones. A match to a resolved action suppresses the candidate
+(nothing created); a different identity (per the instance-qualified key) is genuinely new and is
+created. This is why the identity rule must qualify by instance - it is what distinguishes "this
+was already done" from "this is next period's".
+
+**Alternatives considered**: a permanent "seen keys" ledger (rejected - unbounded growth; a
+bounded lookback over existing resolved rows is enough for a single-user tool).
+
+## Decision: Separation decisions are persisted as merge exceptions
+
+**Rationale (addresses "split will not survive sync")**: without a record, the next sync re-merges
+the same matching keys the user just separated.
+
+**Approach**: `POST /:id/split` writes a `merge_exception(key_a, key_b)` row; reconcile refuses to
+merge any candidate pair whose identities are a listed exception, even on a key match. Verified by
+splitting then re-syncing (quickstart).
+
+## Decision: Stale flagging is gated on a successful, complete read
+
+**Rationale (addresses "absence treated as resolution")**: a failed, truncated, or rate-limited
+read produces no candidates, which must not look like resolution.
+
+**Approach**: reconcile builds a set of source conversations that were read successfully and in
+full this sync; FR-014 stale flagging only considers open actions whose conversation is in that
+set. A source in error state (e.g. an inaccessible chat space) contributes nothing to the set, so
+its actions are never stale-flagged.
+
+## Decision: One-time backfill of the existing action backlog
+
+**Rationale (addresses "existing duplicates have no upgrade path")**: existing rows have null keys
+and requesters; null-never-match means fresh extraction cannot consolidate them.
+
+**Approach**: on first upgrade a guarded backfill derives `dedup_key` + `requested_by` for existing
+actions from their stored fields, then runs the reconcile/merge over the backlog once, preserving
+each surviving action's manual edits (due date, priority, category/pin) and status. Guarded via the
+migrations ledger / a one-shot marker so it never re-runs.
+
+**Alternatives considered**: leaving the backlog as-is (rejected - the list stays ~60% duplicated
+for everything synced before the feature, defeating SC-001 for existing users).
+
+## Decision: Category pinning distinguishes auto-eligible from user-chosen
+
+**Rationale (addresses "manual Uncategorised is not persistent" and refines the earlier
+"only-when-null" rule)**: with only `category_id`, NULL means both "unfiled" and "user chose
+Uncategorised", so auto-filing overwrites the deliberate choice.
+
+**Approach**: add `category_pinned`; a user assignment (any category, including Uncategorised) sets
+it, and auto-filing skips pinned actions. Replaces the "auto-file only when category_id is null"
+rule from the previous review round.
+
+## Decision: Board comparator is explicit
+
+**Rationale (addresses "urgency ordering is ambiguous")**: no defined order for overdue-low vs
+future-high, and SC-004 clashed with Uncategorised-last.
+
+**Approach**: order buckets overdue -> due-today -> future -> undated; within a bucket by due date
+ascending, then priority (high>medium>low>none), then created_at ascending. A category ranks by its
+most-urgent action under this comparator; Uncategorised is pinned last regardless, and SC-005 is
+judged excluding Uncategorised.
