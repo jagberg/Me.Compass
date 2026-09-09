@@ -9,3 +9,6 @@ build/
 data/
 # Throwaway prototype HTMLs — sample data was drawn from real Drive content, not for git
 .scratch/personal-action-manager/assets/
+
+# Built frontend copied in for serving (build output)
+backend/public/
