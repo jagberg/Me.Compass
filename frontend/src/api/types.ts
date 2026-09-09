@@ -17,6 +17,26 @@ export interface Action {
   suggested_next_step: string | null;
   created_at: string;
   resolved_at: string | null;
+  requested_by: string | null;
+  category_id: string | null;
+  category_pinned: boolean;
+  conflict: boolean;
+  stale_review: boolean;
+  action_url?: string;
+  action_target?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  rule: string;
+  icon: string | null;
+  created_at: string;
+}
+
+export interface CategoryGroup {
+  category: Category | null;
+  actions: Action[];
 }
 
 export interface SourceConnection {

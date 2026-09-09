@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Action, SourceConnection, SourceType } from "../api/types";
-import { getActionsGrouped, getTodayActions } from "../api/actions";
-import { getSources, triggerSync } from "../api/sources";
-import { SourceGroup } from "../components/SourceGroup";
-import { ViewToggle, ViewMode } from "../components/ViewToggle";
-import { NextStepsList } from "../components/NextStepsList";
-import { AddActionForm } from "../components/AddActionForm";
-
-const SOURCE_ORDER: SourceType[] = ["email", "chat", "meeting", "manual"];
+import { Action, Category, CategoryGroup, SourceConnection } from "../api/types";
+import { getActionsByCategory } from "../api/actions";
+import { getCategories } from "../api/categories";
+import { getSources, syncAll } from "../api/sources";
+import { CategoryBoard } from "../components/CategoryBoard";
+import { ManageCategories } from "../components/ManageCategories";
 
 const TODAY_LABEL = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+
+type ViewMode = "two" | "one" | "manage";
 
 function Sidebar({ openCount }: { openCount: number }) {
   return (
@@ -35,16 +34,16 @@ function Sidebar({ openCount }: { openCount: number }) {
 }
 
 export function Dashboard() {
-  const [grouped, setGrouped] = useState<Record<SourceType, Action[]> | null>(null);
-  const [today, setToday] = useState<Action[]>([]);
+  const [groups, setGroups] = useState<CategoryGroup[] | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [sources, setSources] = useState<SourceConnection[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [showAdd, setShowAdd] = useState(false);
+  const [view, setView] = useState<ViewMode>("two");
+  const [syncing, setSyncing] = useState(false);
 
   async function reload() {
-    const [g, t, s] = await Promise.all([getActionsGrouped(), getTodayActions(), getSources()]);
-    setGrouped(g);
-    setToday(t);
+    const [g, c, s] = await Promise.all([getActionsByCategory(), getCategories(), getSources()]);
+    setGroups(g);
+    setCategories(c);
     setSources(s);
   }
 
@@ -52,38 +51,34 @@ export function Dashboard() {
     reload();
   }, []);
 
-  function handleActionChange(updated: Action) {
-    const stillOpen = updated.status === "open";
-    setGrouped((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev };
-      next[updated.source_type] = stillOpen
-        ? next[updated.source_type].map((a) => (a.id === updated.id ? updated : a))
-        : next[updated.source_type].filter((a) => a.id !== updated.id);
-      return next;
-    });
-    setToday((prev) => (stillOpen ? prev.map((a) => (a.id === updated.id ? updated : a)) : prev.filter((a) => a.id !== updated.id)));
+  const openCount = useMemo(
+    () => (groups ? groups.reduce((n, grp) => n + grp.actions.length, 0) : 0),
+    [groups],
+  );
+  const uncategorisedCount = useMemo(
+    () => groups?.find((g) => g.category === null)?.actions.length ?? 0,
+    [groups],
+  );
+
+  function handleActionChange(_updated: Action) {
+    reload(); // a change can move an action between categories or resolve it
   }
 
-  function handleCreated(action: Action) {
-    setGrouped((prev) => (prev ? { ...prev, [action.source_type]: [...prev[action.source_type], action] } : prev));
-    setShowAdd(false);
+  function handleSplit(_actions: Action[]) {
+    reload();
   }
 
-  async function handleSync(type: string) {
+  async function handleSyncAll() {
+    setSyncing(true);
     try {
-      await triggerSync(type);
+      await syncAll();
     } finally {
+      setSyncing(false);
       reload();
     }
   }
 
-  const openCount = useMemo(
-    () => (grouped ? Object.values(grouped).reduce((n, list) => n + list.length, 0) : 0),
-    [grouped],
-  );
-
-  if (!grouped) {
+  if (!groups) {
     return (
       <div className="app-shell">
         <Sidebar openCount={0} />
@@ -104,10 +99,20 @@ export function Dashboard() {
             <span className="page-header__date">{TODAY_LABEL}</span>
           </div>
           <div className="page-header__right">
-            <button className="quick-add" onClick={() => setShowAdd((v) => !v)}>
-              Quick add… (q)
+            <button className="sync-btn" onClick={handleSyncAll} disabled={syncing}>
+              {syncing ? "Syncing…" : "Sync all"}
             </button>
-            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <div className="switch">
+              <button aria-pressed={view === "two"} onClick={() => setView("two")}>
+                Two columns
+              </button>
+              <button aria-pressed={view === "one"} onClick={() => setView("one")}>
+                Single rail
+              </button>
+              <button aria-pressed={view === "manage"} onClick={() => setView("manage")}>
+                Manage
+              </button>
+            </div>
           </div>
         </div>
 
@@ -117,20 +122,21 @@ export function Dashboard() {
               <span>{s.source_type}</span>
               <span>{s.status}</span>
               {s.last_error && <span className="source-status__error">{s.last_error}</span>}
-              <button onClick={() => handleSync(s.source_type)}>Sync</button>
             </div>
           ))}
         </section>
 
-        {showAdd && <AddActionForm onCreated={handleCreated} />}
-
-        <NextStepsList actions={today} onChange={handleActionChange} />
-
-        <div className={`dashboard__body dashboard__body--${viewMode}`}>
-          {SOURCE_ORDER.map((sourceType) => (
-            <SourceGroup key={sourceType} sourceType={sourceType} actions={grouped[sourceType]} onChange={handleActionChange} />
-          ))}
-        </div>
+        {view === "manage" ? (
+          <ManageCategories categories={categories} uncategorisedCount={uncategorisedCount} onChanged={reload} />
+        ) : (
+          <CategoryBoard
+            groups={groups}
+            categories={categories}
+            twoColumn={view === "two"}
+            onChange={handleActionChange}
+            onSplit={handleSplit}
+          />
+        )}
       </main>
     </div>
   );
