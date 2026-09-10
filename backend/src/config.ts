@@ -1,32 +1,34 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
 /**
- * Small app config for things that vary by environment but aren't secrets-in-code: the JIRA base
- * URL and the ESS (leave/HR) base URL used to build action deep-links. Read from data/app-config.json
- * (gitignored) with env overrides. Missing values fall back to sensible defaults / no link.
+ * All non-secret-in-code configuration, read from the environment (populated from the single root
+ * .env by src/load-env.ts). Previously split across backend/data/app-config.json and
+ * backend/data/jira-credentials.json; now consolidated so there is one place to look.
  */
+export interface JiraCredentials {
+  baseUrl: string;
+  email: string;
+  apiToken: string;
+  accountId: string;
+}
+
 export interface AppConfig {
   jiraBaseUrl: string;
   essUrl: string | null;
+  /** Full JIRA credentials, or null when not all four values are set. */
+  jira: JiraCredentials | null;
 }
-
-const CONFIG_PATH = process.env.DATA_DIR ? `${process.env.DATA_DIR}/app-config.json` : "./data/app-config.json";
 
 let cached: AppConfig | undefined;
 
 export function getAppConfig(): AppConfig {
   if (cached) return cached;
-  let file: { jira_base_url?: string; ess_url?: string } = {};
-  try {
-    const path = join(process.cwd(), CONFIG_PATH);
-    if (existsSync(path)) file = JSON.parse(readFileSync(path, "utf8"));
-  } catch {
-    /* ignore malformed config; use defaults */
-  }
+  const baseUrl = process.env.JIRA_BASE_URL ?? "https://compareclub.atlassian.net";
+  const email = process.env.JIRA_EMAIL ?? "";
+  const apiToken = process.env.JIRA_API_TOKEN ?? "";
+  const accountId = process.env.JIRA_ACCOUNT_ID ?? "";
   cached = {
-    jiraBaseUrl: process.env.JIRA_BASE_URL ?? file.jira_base_url ?? "https://compareclub.atlassian.net",
-    essUrl: process.env.ESS_URL ?? file.ess_url ?? null,
+    jiraBaseUrl: baseUrl,
+    essUrl: process.env.ESS_URL || null,
+    jira: email && apiToken && accountId ? { baseUrl, email, apiToken, accountId } : null,
   };
   return cached;
 }

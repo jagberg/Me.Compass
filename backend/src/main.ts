@@ -1,3 +1,4 @@
+import "./load-env"; // MUST be first: loads root .env before anything reads process.env
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";

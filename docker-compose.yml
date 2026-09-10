@@ -4,9 +4,11 @@ services:
     ports:
       - "3000:3000"
       - "51789:51789"
+    # All config comes from the root .env (identity, Google, JIRA, ESS). DATA_DIR is overridden
+    # to the container volume path.
+    env_file:
+      - .env
     environment:
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - DATA_DIR=/data
     volumes:
       - action-data:/data
