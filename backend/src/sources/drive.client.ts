@@ -3,6 +3,12 @@ import { google } from "googleapis";
 import { GoogleAuthService } from "./google-auth.service";
 import { RawSourceItem } from "./gmail.client";
 
+// Cap the doc text handed to the extractor. Without this a long meeting-notes doc produces a
+// prompt large enough to make the `claude` CLI exit non-zero ("Command failed"), which fails the
+// whole Drive sync and leaves its cursor un-advanced - so it re-scans the same growing window
+// every time. Mirrors the per-thread cap Gmail/Chat already apply.
+const MAX_DOC_CHARS = 8000;
+
 @Injectable()
 export class DriveClient {
   constructor(private readonly auth: GoogleAuthService) {}
@@ -28,9 +34,10 @@ export class DriveClient {
         .join("");
       if (!/next steps/i.test(text)) continue;
       items.push({
-        rawText: `Doc: ${file.name}\n${text}`,
+        rawText: `Doc: ${file.name}\n${text.slice(0, MAX_DOC_CHARS)}`,
         sourceUrl: file.webViewLink ?? `https://docs.google.com/document/d/${file.id}`,
-        truncated: false, // full doc text read; no cap applied
+        // A capped doc may drop an ask past the cut, so it must not count as a full read (FR-018).
+        truncated: text.length > MAX_DOC_CHARS,
       });
     }
     return items;

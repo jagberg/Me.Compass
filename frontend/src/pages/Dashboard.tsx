@@ -70,9 +70,18 @@ export function Dashboard() {
 
   async function handleSyncAll() {
     setSyncing(true);
+    // Poll source status while the sync runs so each badge flips (connected/error) as its source
+    // finishes, instead of the whole bar staying frozen on the pre-sync state until the POST returns.
+    const poll = setInterval(() => {
+      getSources().then(setSources).catch(() => {});
+    }, 2000);
     try {
       await syncAll();
+    } catch {
+      // A failure (or the timeout aborting the request) must not wedge the button; the polled
+      // per-source badges already show which source failed. Swallow and let finally reset.
     } finally {
+      clearInterval(poll);
       setSyncing(false);
       reload();
     }

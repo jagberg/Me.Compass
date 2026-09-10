@@ -7,7 +7,12 @@ import { DriveClient } from "./drive.client";
 import { ChatClient } from "./chat.client";
 import { ReconcileService, Candidate, ReconcileResult } from "./reconcile.service";
 import { JiraService } from "../jira/jira.service";
+import { mapWithConcurrency } from "../util/concurrency";
 import { ConnectionSourceType, SourceType } from "../types";
+
+// How many per-item `claude` extraction calls to run at once. Each is a heavy subprocess, so keep
+// this modest - enough to cut wall-clock on a backlog, not so many it thrashes the machine.
+const EXTRACT_CONCURRENCY = 4;
 
 const SOURCE_LABEL: Record<ConnectionSourceType, string> = {
   gmail: "email",
@@ -53,20 +58,25 @@ export class SourcesService {
     const syncedAt = new Date().toISOString();
     try {
       const rawItems = await this.clientFor(type).fetchSince(connection?.last_synced_at ?? null);
+      // Extract items with bounded concurrency (results stay in input order). A single failing
+      // item still rejects the batch, so the source flips to error and its cursor holds - the same
+      // all-or-nothing guarantee the prior sequential loop gave.
+      const extractedPerItem = await mapWithConcurrency(rawItems, EXTRACT_CONCURRENCY, (item) =>
+        this.claude.extractActions(item.rawText, SOURCE_LABEL[type]),
+      );
       const candidates: Candidate[] = [];
       const fullyRead: string[] = [];
-      for (const item of rawItems) {
-        const extracted = await this.claude.extractActions(item.rawText, SOURCE_LABEL[type]);
+      rawItems.forEach((item, i) => {
         // Only a fully-read conversation is eligible for stale gating (FR-018).
         if (!item.truncated) fullyRead.push(item.sourceUrl);
-        for (const action of extracted) {
+        for (const action of extractedPerItem[i]) {
           candidates.push({
             extracted: action,
             source_type: ACTION_SOURCE_TYPE[type],
             source_url: item.sourceUrl,
           });
         }
-      }
+      });
       // Mark connected but do NOT advance the cursor yet; that happens once reconcile persists.
       this.connectionsRepo.upsert(type, { status: "connected", last_error: null });
       return { candidates, ok: true, fullyRead, syncedAt };
