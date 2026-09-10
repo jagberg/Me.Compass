@@ -4,6 +4,24 @@ Dated, append-only record of decisions for Me.Compass. See `docs/adr/` for
 the decisions substantial enough to warrant a full ADR (hard to reverse,
 surprising without context, real trade-off).
 
+## 2026-09-10 - Constitution VI: Portable by Default (open-sourceable)
+
+**Decision:** Add Principle VI to the constitution: every feature must be built
+so a stranger can clone, copy `.env.example` to `.env`, add their own values,
+and run it with no source edits - no committed secrets, no hardcoded personal
+or org-specific values, graceful degradation when a value is absent. Bumped the
+constitution to 1.1.0.
+**Reasoning:** The tool is meant to be open-sourced; baked-in identity, org
+endpoints, or committed secrets would leak private data and break for anyone
+else.
+**Trade-off accepted:** Existing hardcoded defaults (ME_NAME/ME_EMAIL,
+JIRA_BASE_URL) now technically violate the new principle and are flagged for a
+follow-up cleanup rather than fixed in the same change.
+**Alternatives rejected:** Leaving it as an informal convention (not binding on
+`/speckit` Constitution Checks).
+**Supersedes:** n/a
+**Detail:** `.specify/memory/constitution.md` (Principle VI)
+
 ## 2026-09-09 - Rename actions inline, and a test harness
 
 **Decision:** Let the user edit an action's title inline on the board and treat
