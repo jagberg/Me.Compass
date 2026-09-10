@@ -51,7 +51,9 @@ export class ChatClient {
           rawText: `Space: ${space.displayName ?? space.name}\n\n${full.slice(0, MAX_THREAD_CHARS)}`,
           // Key provenance on the stable thread id, not the first message in this sync's fragment,
           // so the same thread keeps one source_url across incremental syncs (stale gating relies on it).
-          sourceUrl: `https://chat.google.com/${encodeURIComponent(threadKey)}`,
+          // threadKey is a resource path ("spaces/<S>/threads/<T>"); keep its slashes real so Chat can
+          // route to the thread - encodeURIComponent turns them into %2F and only opens the app root.
+          sourceUrl: `https://chat.google.com/${threadKey}`,
           truncated: full.length > MAX_THREAD_CHARS,
         });
       }
