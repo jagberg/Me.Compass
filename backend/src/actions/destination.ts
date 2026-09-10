@@ -30,8 +30,23 @@ export function resolveDestination(a: Action): Destination | null {
   return null;
 }
 
+/**
+ * Pins a chat.google.com link to the reader's account with ?authuser=<email>. Without it the link
+ * resolves against the browser's default Google account and, if that isn't the reader, Chat drops
+ * them on its home page instead of the thread. Non-chat URLs and already-pinned links pass through.
+ */
+function pinChatAccount(url: string | null): string | null {
+  const email = getAppConfig().meEmail;
+  if (!url || !email) return url;
+  if (!url.startsWith("https://chat.google.com/") || url.includes("authuser=")) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}authuser=${email}`;
+}
+
 /** Attaches action_url/action_target to an action for API responses. */
 export function withDestination(a: Action): Action {
-  const dest = resolveDestination(a);
-  return dest ? { ...a, ...dest } : a;
+  // Pin chat source_urls before resolving, so both the source icon (source_url) and the play button
+  // (action_url, derived from source_url) open in the reader's account.
+  const pinned = a.source_type === "chat" ? { ...a, source_url: pinChatAccount(a.source_url) } : a;
+  const dest = resolveDestination(pinned);
+  return dest ? { ...pinned, ...dest } : pinned;
 }

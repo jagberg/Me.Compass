@@ -13,6 +13,8 @@ export interface JiraCredentials {
 export interface AppConfig {
   jiraBaseUrl: string;
   essUrl: string | null;
+  /** The reader's email, used to pin Chat deep links to their account (?authuser=). Null if unset. */
+  meEmail: string | null;
   /** Full JIRA credentials, or null when not all four values are set. */
   jira: JiraCredentials | null;
 }
@@ -28,6 +30,7 @@ export function getAppConfig(): AppConfig {
   cached = {
     jiraBaseUrl: baseUrl,
     essUrl: process.env.ESS_URL || null,
+    meEmail: process.env.ME_EMAIL || null,
     jira: email && apiToken && accountId ? { baseUrl, email, apiToken, accountId } : null,
   };
   return cached;
