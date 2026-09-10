@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { HttpException, Injectable, Logger } from "@nestjs/common";
 import { ActionsRepository } from "./actions.repository";
 import { RunResultRepository } from "./run-result.repository";
 import { CategoriesRepository } from "../categories/categories.repository";
@@ -130,11 +130,18 @@ export class ActionsService {
 
   update(
     id: string,
-    fields: Partial<Pick<Action, "due_date" | "priority" | "status" | "category_id" | "conflict" | "stale_review">>,
+    fields: Partial<Pick<Action, "title" | "due_date" | "priority" | "status" | "category_id" | "conflict" | "stale_review">>,
   ): Action | undefined {
     const existing = this.repo.getById(id);
     if (!existing) return undefined;
     const patch: Partial<Action> = { ...fields };
+    // A user title edit is authoritative: reject blank, otherwise pin it (FR-003, FR-004).
+    if (fields.title !== undefined) {
+      const trimmed = fields.title.trim();
+      if (!trimmed) throw new HttpException("Title cannot be blank", 400);
+      patch.title = trimmed;
+      patch.title_pinned = true;
+    }
     if (fields.due_date !== undefined && fields.due_date !== existing.due_date) {
       patch.due_date_inferred = false;
     }

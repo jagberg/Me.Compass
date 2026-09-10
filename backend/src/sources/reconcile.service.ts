@@ -106,6 +106,9 @@ export class ReconcileService {
           category_pinned: existingOpen.category_pinned,
           conflict,
           stale_review: false, // it reappeared this sync, so not stale
+          // A user rename is authoritative: keep the existing title and its pinned flag. The merge
+          // never writes `title`, so a pinned title is preserved either way (FR-004, FR-005).
+          title_pinned: existingOpen.title_pinned,
         });
         merged += 1 + absorbed.length;
         continue;

@@ -41,6 +41,8 @@ export interface Action {
   merged_from: MergedFromEntry[] | null;
   conflict: boolean;
   stale_review: boolean;
+  // True once the user has edited the title; protects it from extraction/reconcile overwrite (feature 004).
+  title_pinned: boolean;
   // Derived at read time (not stored): where to go to action this item, for the play button.
   action_url?: string;
   action_target?: string;

@@ -16,6 +16,7 @@ type NewAction = Omit<
   | "merged_from"
   | "conflict"
   | "stale_review"
+  | "title_pinned"
 > & {
   status?: Status;
   requested_by?: string | null;
@@ -25,6 +26,7 @@ type NewAction = Omit<
   merged_from?: Action["merged_from"];
   conflict?: boolean;
   stale_review?: boolean;
+  title_pinned?: boolean;
 };
 
 function toAction(row: Record<string, unknown>): Action {
@@ -48,6 +50,7 @@ function toAction(row: Record<string, unknown>): Action {
     merged_from: row.merged_from ? (JSON.parse(row.merged_from as string) as MergedFromEntry[]) : null,
     conflict: Boolean(row.conflict),
     stale_review: Boolean(row.stale_review),
+    title_pinned: Boolean(row.title_pinned),
   };
 }
 
@@ -68,12 +71,13 @@ export class ActionsRepository {
       merged_from: input.merged_from ?? null,
       conflict: input.conflict ?? false,
       stale_review: input.stale_review ?? false,
+      title_pinned: input.title_pinned ?? false,
     };
     db.prepare(
       `INSERT INTO action
         (id, title, description, source_type, source_url, status, due_date, due_date_inferred, priority, suggested_next_step, created_at, resolved_at,
-         requested_by, category_id, category_pinned, dedup_key, merged_from, conflict, stale_review)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         requested_by, category_id, category_pinned, dedup_key, merged_from, conflict, stale_review, title_pinned)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       action.id,
       action.title,
@@ -94,6 +98,7 @@ export class ActionsRepository {
       action.merged_from ? JSON.stringify(action.merged_from) : null,
       action.conflict ? 1 : 0,
       action.stale_review ? 1 : 0,
+      action.title_pinned ? 1 : 0,
     );
     return action;
   }
@@ -137,6 +142,7 @@ export class ActionsRepository {
     fields: Partial<
       Pick<
         Action,
+        | "title"
         | "due_date"
         | "priority"
         | "status"
@@ -146,6 +152,7 @@ export class ActionsRepository {
         | "category_pinned"
         | "conflict"
         | "stale_review"
+        | "title_pinned"
       >
     >,
   ): Action | undefined {
@@ -154,9 +161,10 @@ export class ActionsRepository {
     const merged = { ...existing, ...fields };
     const db = getDb();
     db.prepare(
-      `UPDATE action SET due_date = ?, priority = ?, status = ?, due_date_inferred = ?, resolved_at = ?,
-         category_id = ?, category_pinned = ?, conflict = ?, stale_review = ? WHERE id = ?`,
+      `UPDATE action SET title = ?, due_date = ?, priority = ?, status = ?, due_date_inferred = ?, resolved_at = ?,
+         category_id = ?, category_pinned = ?, conflict = ?, stale_review = ?, title_pinned = ? WHERE id = ?`,
     ).run(
+      merged.title,
       merged.due_date,
       merged.priority,
       merged.status,
@@ -166,6 +174,7 @@ export class ActionsRepository {
       merged.category_pinned ? 1 : 0,
       merged.conflict ? 1 : 0,
       merged.stale_review ? 1 : 0,
+      merged.title_pinned ? 1 : 0,
       id,
     );
     return this.getById(id);
@@ -175,15 +184,16 @@ export class ActionsRepository {
   setDigestFields(
     id: string,
     fields: Partial<
-      Pick<Action, "requested_by" | "category_id" | "category_pinned" | "dedup_key" | "merged_from" | "conflict" | "stale_review">
+      Pick<Action, "requested_by" | "category_id" | "category_pinned" | "dedup_key" | "merged_from" | "conflict" | "stale_review" | "title_pinned">
     >,
   ): void {
     const existing = this.getById(id);
     if (!existing) return;
     const merged = { ...existing, ...fields };
     const db = getDb();
+    // Note: this never writes `title`, so a merge cannot overwrite a title (pinned or not).
     db.prepare(
-      `UPDATE action SET requested_by = ?, category_id = ?, category_pinned = ?, dedup_key = ?, merged_from = ?, conflict = ?, stale_review = ? WHERE id = ?`,
+      `UPDATE action SET requested_by = ?, category_id = ?, category_pinned = ?, dedup_key = ?, merged_from = ?, conflict = ?, stale_review = ?, title_pinned = ? WHERE id = ?`,
     ).run(
       merged.requested_by,
       merged.category_id,
@@ -192,6 +202,7 @@ export class ActionsRepository {
       merged.merged_from ? JSON.stringify(merged.merged_from) : null,
       merged.conflict ? 1 : 0,
       merged.stale_review ? 1 : 0,
+      merged.title_pinned ? 1 : 0,
       id,
     );
   }

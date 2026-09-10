@@ -36,8 +36,17 @@ export function ActionLine({
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(action.title);
 
   const src = SRC_ICON[action.source_type];
+
+  async function saveTitle() {
+    const v = draft.trim();
+    setEditing(false);
+    if (v && v !== action.title) await patch({ title: v });
+    else setDraft(action.title); // blank or unchanged: keep the current title
+  }
 
   async function handleRun() {
     setRunning(true);
@@ -78,7 +87,34 @@ export function ActionLine({
           <div className="line__title">
             {action.conflict && <span className="badge-conflict">conflict</span>}
             {action.stale_review && <span className="badge-stale">resolved?</span>}
-            {action.title}
+            {editing ? (
+              <input
+                className="line__title-input"
+                value={draft}
+                autoFocus
+                aria-label="Edit title"
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveTitle();
+                  if (e.key === "Escape") {
+                    setDraft(action.title);
+                    setEditing(false);
+                  }
+                }}
+                onBlur={saveTitle}
+              />
+            ) : (
+              <span
+                className="line__title-text"
+                title="Click to rename"
+                onClick={() => {
+                  setDraft(action.title);
+                  setEditing(true);
+                }}
+              >
+                {action.title}
+              </span>
+            )}
           </div>
           {action.suggested_next_step && (
             <div className="line__next">

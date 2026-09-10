@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-migrations.js",
     "start": "node dist/main.js",
     "serve": "node scripts/serve.js",
-    "dev": "tsc -p tsconfig.json -w"
+    "dev": "tsc -p tsconfig.json -w",
+    "test": "node --import tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@fastify/static": "^7.0.4",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.5.4"
   }
 }

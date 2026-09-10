@@ -32,7 +32,7 @@ export function createAction(input: {
 
 export function updateAction(
   id: string,
-  fields: Partial<Pick<Action, "due_date" | "priority" | "status" | "category_id" | "conflict" | "stale_review">>,
+  fields: Partial<Pick<Action, "title" | "due_date" | "priority" | "status" | "category_id" | "conflict" | "stale_review">>,
 ): Promise<Action> {
   return apiFetch(`/actions/${id}`, { method: "PATCH", body: JSON.stringify(fields) });
 }

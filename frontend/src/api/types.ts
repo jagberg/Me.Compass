@@ -22,6 +22,7 @@ export interface Action {
   category_pinned: boolean;
   conflict: boolean;
   stale_review: boolean;
+  title_pinned: boolean;
   action_url?: string;
   action_target?: string;
 }

@@ -30,6 +30,7 @@ export class ActionsController {
     @Param("id") id: string,
     @Body()
     body: {
+      title?: string;
       due_date?: string | null;
       priority?: string;
       status?: string;

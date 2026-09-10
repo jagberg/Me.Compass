@@ -4,6 +4,28 @@ Dated, append-only record of decisions for Me.Compass. See `docs/adr/` for
 the decisions substantial enough to warrant a full ADR (hard to reverse,
 surprising without context, real trade-off).
 
+## 2026-09-09 - Rename actions inline, and a test harness
+
+**Decision:** Let the user edit an action's title inline on the board and treat
+that edit as authoritative via a `title_pinned` flag (mirroring
+`category_pinned`) that reconciliation must respect; blank titles are rejected
+at the update boundary. Introduce automated tests: `node:test` + `tsx` on the
+backend, Vitest + Testing Library on the frontend, covering rename plus a
+backfill of the existing reconcile / comparator / destination / extraction-
+parsing logic. Feature `004-rename-actions`.
+**Reasoning:** Titles were AI-generated and unchangeable, so a misread stuck;
+and features 001-003 had no automated tests, leaving the reconcile logic
+(the most regression-prone code) unguarded. `node:test` needs no dependency
+and Vitest reuses the existing Vite, keeping the tooling minimal.
+**Trade-off accepted:** `tsx` is a new backend dev dependency (Node's native
+TS type-stripping does not execute NestJS's experimental decorators); a full
+compile-then-test path would avoid it but adds a build step.
+**Alternatives rejected:** storing the original title and diffing to detect a
+manual change (more state, ambiguous); Jest (heavier, duplicates a runner Node
+ships); Playwright E2E now (nondeterministic for AI-triggered sync flows).
+**Supersedes:** n/a
+**Detail:** `specs/004-rename-actions/`
+
 ## 2026-09-08 - Action digest: cross-source de-duplication, requester, categories, priority board
 
 **Decision:** Add a post-fetch reconcile pass that collapses duplicate
