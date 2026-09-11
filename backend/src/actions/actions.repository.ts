@@ -17,6 +17,7 @@ type NewAction = Omit<
   | "conflict"
   | "stale_review"
   | "title_pinned"
+  | "resolution_ask"
 > & {
   status?: Status;
   requested_by?: string | null;
@@ -27,6 +28,7 @@ type NewAction = Omit<
   conflict?: boolean;
   stale_review?: boolean;
   title_pinned?: boolean;
+  resolution_ask?: string | null;
 };
 
 function toAction(row: Record<string, unknown>): Action {
@@ -51,6 +53,7 @@ function toAction(row: Record<string, unknown>): Action {
     conflict: Boolean(row.conflict),
     stale_review: Boolean(row.stale_review),
     title_pinned: Boolean(row.title_pinned),
+    resolution_ask: (row.resolution_ask as string) ?? null,
   };
 }
 
@@ -72,12 +75,13 @@ export class ActionsRepository {
       conflict: input.conflict ?? false,
       stale_review: input.stale_review ?? false,
       title_pinned: input.title_pinned ?? false,
+      resolution_ask: input.resolution_ask ?? null,
     };
     db.prepare(
       `INSERT INTO action
         (id, title, description, source_type, source_url, status, due_date, due_date_inferred, priority, suggested_next_step, created_at, resolved_at,
-         requested_by, category_id, category_pinned, dedup_key, merged_from, conflict, stale_review, title_pinned)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         requested_by, category_id, category_pinned, dedup_key, merged_from, conflict, stale_review, title_pinned, resolution_ask)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       action.id,
       action.title,
@@ -99,6 +103,7 @@ export class ActionsRepository {
       action.conflict ? 1 : 0,
       action.stale_review ? 1 : 0,
       action.title_pinned ? 1 : 0,
+      action.resolution_ask,
     );
     return action;
   }
@@ -180,11 +185,28 @@ export class ActionsRepository {
     return this.getById(id);
   }
 
-  /** Persists new digest fields on an action (used by reconcile: dedup_key, requester, category, merged_from). */
+  /**
+   * Persists new digest fields on an action (used by reconcile: dedup_key, requester, category,
+   * merged_from; and, since feature 005, resolution_ask plus status/resolved_at so the resolution
+   * judgement step can close an action without going through ActionsService's HTTP-oriented update).
+   */
   setDigestFields(
     id: string,
     fields: Partial<
-      Pick<Action, "requested_by" | "category_id" | "category_pinned" | "dedup_key" | "merged_from" | "conflict" | "stale_review" | "title_pinned">
+      Pick<
+        Action,
+        | "requested_by"
+        | "category_id"
+        | "category_pinned"
+        | "dedup_key"
+        | "merged_from"
+        | "conflict"
+        | "stale_review"
+        | "title_pinned"
+        | "resolution_ask"
+        | "status"
+        | "resolved_at"
+      >
     >,
   ): void {
     const existing = this.getById(id);
@@ -193,7 +215,7 @@ export class ActionsRepository {
     const db = getDb();
     // Note: this never writes `title`, so a merge cannot overwrite a title (pinned or not).
     db.prepare(
-      `UPDATE action SET requested_by = ?, category_id = ?, category_pinned = ?, dedup_key = ?, merged_from = ?, conflict = ?, stale_review = ?, title_pinned = ? WHERE id = ?`,
+      `UPDATE action SET requested_by = ?, category_id = ?, category_pinned = ?, dedup_key = ?, merged_from = ?, conflict = ?, stale_review = ?, title_pinned = ?, resolution_ask = ?, status = ?, resolved_at = ? WHERE id = ?`,
     ).run(
       merged.requested_by,
       merged.category_id,
@@ -203,6 +225,9 @@ export class ActionsRepository {
       merged.conflict ? 1 : 0,
       merged.stale_review ? 1 : 0,
       merged.title_pinned ? 1 : 0,
+      merged.resolution_ask,
+      merged.status,
+      merged.resolved_at,
       id,
     );
   }

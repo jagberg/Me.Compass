@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Chat Action Resolution Detection",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "sync", "label": "Chat Sync" },
+    { "id": "newask_path", "label": "New Ask Handling", "variant": "exception" },
+    { "id": "judgement", "label": "Resolution Judgement" },
+    { "id": "resolved_path", "label": "Resolved Outcome" }
+  ],
+  "phases": [
+    { "id": "capture_phase", "label": "Capture", "fromCol": 0, "toCol": 0 },
+    { "id": "judge_phase", "label": "Sync + judge", "fromCol": 1, "toCol": 3, "variant": "emphasis" },
+    { "id": "outcome_phase", "label": "Outcome", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["ask_captured", "chat_sync", "judge", "resolved", "closed"],
+  "nodes": [
+    { "id": "ask_captured", "lane": "sync", "col": 0, "type": "backend", "label": "Capture Ask", "sublabel": "at creation" },
+    { "id": "chat_sync", "lane": "sync", "col": 1, "type": "external", "label": "Chat Sync", "sublabel": "delta only" },
+    { "id": "judge", "lane": "judgement", "col": 2, "type": "security", "label": "Judge Verdict", "sublabel": "ask vs delta", "tag": "claude CLI" },
+    { "id": "unsure", "lane": "judgement", "col": 3, "type": "security", "label": "Unsure", "sublabel": "can't tell" },
+    { "id": "flagged", "lane": "judgement", "col": 5, "type": "database", "label": "Flagged", "sublabel": "stale_review" },
+    { "id": "resolved", "lane": "resolved_path", "col": 3, "type": "backend", "label": "Resolved", "sublabel": "clearly satisfied" },
+    { "id": "closed", "lane": "resolved_path", "col": 5, "type": "database", "label": "Action Closed", "sublabel": "done + resolved_at" },
+    { "id": "new_ask", "lane": "newask_path", "col": 2, "type": "messagebus", "label": "New Ask", "sublabel": "different task" },
+    { "id": "reconciled", "lane": "newask_path", "col": 5, "type": "backend", "label": "Reconcile", "sublabel": "dedup_key match" }
+  ],
+  "edges": [
+    { "from": "ask_captured", "to": "chat_sync", "label": "later sync", "variant": "emphasis", "labelDy": -20 },
+    { "from": "chat_sync", "to": "judge", "label": "delta arrives", "variant": "emphasis", "bias": 0.75, "labelDy": 40 },
+    { "from": "judge", "to": "resolved", "label": "resolved", "variant": "emphasis" },
+    { "from": "resolved", "to": "closed", "label": "close action", "variant": "emphasis" },
+    { "from": "judge", "to": "unsure", "label": "ambiguous", "labelAt": [365, 415] },
+    { "from": "unsure", "to": "flagged", "label": "flag for review" },
+    { "from": "judge", "to": "chat_sync", "label": "still open — no change", "role": "branch", "route": "return-left" },
+    { "from": "chat_sync", "to": "new_ask", "label": "different ask", "role": "branch", "variant": "security", "bias": 0.25, "labelDx": 55 },
+    { "from": "new_ask", "to": "reconciled", "label": "existing merge logic", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One Ask, One Judgement", "items": ["Captured once at creation, never re-derived", "Only the new delta is judged — no full re-fetch"] },
+    { "dot": "rose", "title": "Unsure Never Guesses", "items": ["An ambiguous delta is flagged for review, not closed", "A later, clearer delta can still resolve it"] },
+    { "dot": "cyan", "title": "New Asks Reuse Reconcile", "items": ["A different ask never closes the original action", "Routed through the existing dedup_key merge logic"] }
+  ]
+}

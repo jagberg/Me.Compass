@@ -43,6 +43,9 @@ export interface Action {
   stale_review: boolean;
   // True once the user has edited the title; protects it from extraction/reconcile overwrite (feature 004).
   title_pinned: boolean;
+  // Snapshot of the ask this chat action was created for, captured at creation/merge time and judged
+  // against later sync deltas (feature 005). Null for non-chat actions and pre-feature chat actions.
+  resolution_ask: string | null;
   // Derived at read time (not stored): where to go to action this item, for the play button.
   action_url?: string;
   action_target?: string;

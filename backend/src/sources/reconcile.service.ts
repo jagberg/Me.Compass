@@ -17,6 +17,7 @@ export interface ReconcileResult {
   actions_merged: number;
   actions_suppressed: number;
   stale_flagged: number;
+  actions_resolved: number;
 }
 
 /**
@@ -51,7 +52,11 @@ export class ReconcileService {
     };
   }
 
-  async reconcile(candidates: Candidate[], processedConversations: Set<string>): Promise<ReconcileResult> {
+  async reconcile(
+    candidates: Candidate[],
+    processedConversations: Set<string>,
+    chatDelta: Map<string, string> = new Map(),
+  ): Promise<ReconcileResult> {
     const categories = this.categoriesRepo.list().map((c) => ({ id: c.id, name: c.name, rule: c.rule }));
     let created = 0;
     let merged = 0;
@@ -109,6 +114,9 @@ export class ReconcileService {
           // A user rename is authoritative: keep the existing title and its pinned flag. The merge
           // never writes `title`, so a pinned title is preserved either way (FR-004, FR-005).
           title_pinned: existingOpen.title_pinned,
+          // Refresh the captured ask from the latest restatement (feature 005, research.md #2). Not
+          // user-editable, so - unlike title/category - there is no "pinned" concept to preserve.
+          resolution_ask: primary.source_type === "chat" ? primary.extracted.description : existingOpen.resolution_ask,
         });
         merged += 1 + absorbed.length;
         continue;
@@ -129,14 +137,64 @@ export class ReconcileService {
         dedup_key: key,
         merged_from: snapshots.length ? snapshots : null,
         category_id,
+        // Capture the ask verbatim from extraction - no extra claude call (feature 005, research.md #1).
+        resolution_ask: primary.source_type === "chat" ? primary.extracted.description : null,
       });
       created++;
       merged += absorbed.length;
     }
 
-    const stale_flagged = this.flagStale(candidates, processedConversations);
+    const { handledIds, resolved } = await this.resolveChatActions(candidates, chatDelta);
+    const stale_flagged = this.flagStale(candidates, processedConversations, handledIds);
 
-    return { actions_created: created, actions_merged: merged, actions_suppressed: suppressed, stale_flagged };
+    return {
+      actions_created: created,
+      actions_merged: merged,
+      actions_suppressed: suppressed,
+      stale_flagged,
+      actions_resolved: resolved,
+    };
+  }
+
+  /**
+   * FR-002-FR-008: for every open chat action with a captured resolution_ask whose thread produced
+   * new messages this sync, judge those messages against the ask (unless this sync's create/merge
+   * loop already handled that action's identity - FR-007). Returns every action id considered
+   * (regardless of verdict) so flagStale() can skip them - a "still-open" verdict is an explicit
+   * decision to leave the action alone, and must not be immediately overwritten by the older
+   * stale-flagging mechanism running straight after in the same pass.
+   */
+  private async resolveChatActions(
+    candidates: Candidate[],
+    chatDelta: Map<string, string>,
+  ): Promise<{ handledIds: Set<string>; resolved: number }> {
+    const seenChatKeys = new Set(
+      candidates.filter((c) => c.source_type === "chat").map((c) => c.extracted.dedup_key).filter(Boolean) as string[],
+    );
+    const handledIds = new Set<string>();
+    let resolved = 0;
+    for (const action of this.actionsRepo.listByStatus("open")) {
+      if (action.source_type !== "chat" || !action.resolution_ask || !action.source_url) continue;
+      const delta = chatDelta.get(action.source_url);
+      if (delta === undefined) continue; // thread had no new activity this sync
+      if (action.dedup_key && seenChatKeys.has(action.dedup_key)) continue; // already handled above (FR-007)
+
+      handledIds.add(action.id);
+      try {
+        const verdict = await this.claude.judgeChatResolution(action.resolution_ask, delta);
+        if (verdict === "resolved") {
+          this.actionsRepo.setDigestFields(action.id, { status: "done", resolved_at: new Date().toISOString() });
+          resolved++;
+        } else if (verdict === "unsure") {
+          this.actionsRepo.setDigestFields(action.id, { stale_review: true });
+        }
+        // "still-open" -> no write, matching FR-005.
+      } catch (e) {
+        // A failed judgement call must never change status (FR-010) - treat exactly like still-open.
+        this.logger.warn(`resolution judgement failed for ${action.id}: ${(e as Error).message}`);
+      }
+    }
+    return { handledIds, resolved };
   }
 
   /**
@@ -254,11 +312,12 @@ export class ReconcileService {
    * but whose identity is absent from the new candidates, flag possibly-resolved. Never auto-close,
    * never flag from a conversation that was not successfully read.
    */
-  private flagStale(candidates: Candidate[], processedConversations: Set<string>): number {
+  private flagStale(candidates: Candidate[], processedConversations: Set<string>, handledIds: Set<string> = new Set()): number {
     const seenKeys = new Set(candidates.map((c) => c.extracted.dedup_key).filter(Boolean) as string[]);
     let flagged = 0;
     for (const action of this.actionsRepo.listByStatus("open")) {
       if (!action.dedup_key || action.stale_review) continue;
+      if (handledIds.has(action.id)) continue; // feature 005's resolution judgement already decided this one
       const conv = action.source_url ?? "";
       if (!processedConversations.has(conv)) continue; // its source was not (fully) read this sync
       if (seenKeys.has(action.dedup_key)) continue; // still present

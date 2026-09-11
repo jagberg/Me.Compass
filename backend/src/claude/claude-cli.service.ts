@@ -181,6 +181,32 @@ Action description: ${description}`;
     return match ? match.id : null;
   }
 
+  /**
+   * Judges whether a chat thread's new delta messages satisfy an action's captured resolution ask.
+   * Returns exactly one of the three literals - never throws a parse error itself; on a genuinely
+   * unparseable answer it falls back to "still-open" (a no-op), the same conservative default the
+   * caller applies to a thrown/CLI error (see reconcile.service.ts's resolveChatActions - FR-010).
+   */
+  async judgeChatResolution(resolutionAsk: string, deltaText: string): Promise<"resolved" | "unsure" | "still-open"> {
+    const prompt = `A chat thread has an open ask. Judge whether the NEW messages below (the delta
+since the last check) show that ask has been satisfactorily resolved.
+
+The ask: ${resolutionAsk}
+
+New messages since last check:
+${deltaText}
+
+Answer with EXACTLY ONE of these three words, nothing else:
+- resolved (the new messages clearly show the ask has been answered/handled - by anyone in the
+  thread, not only the person who was asked)
+- unsure (the new messages might relate to the ask but it's not clear whether it's actually resolved)
+- still-open (the new messages don't address the ask at all, or clearly show it's still pending)`;
+    const result = (await this.run(prompt)).trim().toLowerCase();
+    if (result.includes("resolved")) return "resolved";
+    if (result.includes("unsure")) return "unsure";
+    return "still-open";
+  }
+
   /** Infers a due_date + priority for an action that has neither, from its title/description. */
   async inferDueDateAndPriority(
     title: string,

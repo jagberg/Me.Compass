@@ -33,6 +33,7 @@ export function fakeClaude(over: Record<string, unknown> = {}) {
     areSameTask: async () => false,
     deriveIdentity: async (title: string) => ({ dedup_key: `do:${title.toLowerCase()}`, requested_by: null }),
     extractActions: async () => [],
+    judgeChatResolution: async () => "still-open" as const,
     run: async () => "",
     ...over,
   };
